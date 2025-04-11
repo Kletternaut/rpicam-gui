@@ -1,0 +1,8 @@
+.vscode
+output/
+build/
+*.log
+*.tmp
+*.bak
+*.pro.user
+*.qmake.stash

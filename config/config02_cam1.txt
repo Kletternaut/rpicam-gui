@@ -1,0 +1,8 @@
+camera=1
+qt-preview=--qt-preview
+timeout=5000
+preview=280,240,600,400
+width=4056
+height=3040
+framerate=10
+post-process-file=/home/admin/rpicam-apps/assets/hdr.json

@@ -1,0 +1,98 @@
+Änderungshistorie:
+
+1. [Datum: 09.04.2025]
+   - Datei: `MainWindow.h`
+   - Änderung: Methode `stopRpiCamApp()` in der Header-Datei `MainWindow.h` deklariert.
+   - Grund: Fehler behoben, bei dem die Methode in der `.cpp`-Datei definiert, aber nicht in der Header-Datei deklariert war.
+
+2. [Datum: 09.04.2025]
+   - Datei: `MainWindow.cpp`
+   - Änderung: Methode `loadConfigurationFromFile()` erweitert, um Breite und Höhe aus der Konfigurationsdatei zu lesen und die Auflösung korrekt zu setzen.
+   - Grund: Fehler behoben, bei dem die Auflösung nicht korrekt geladen wurde.
+   - Code:
+     if (!width.isEmpty() && !height.isEmpty()) {
+         QString resolution = width + "x" + height;
+         if (resolutionSelector->findText(resolution) == -1) {
+             resolutionSelector->addItem(resolution);
+         }
+         resolutionSelector->setCurrentText(resolution);
+     }
+
+3. [Datum: 10.04.2025]
+   - Datei: `MainWindow.cpp`
+   - Änderung: Methode `saveConfigurationToFile()` hinzugefügt, um die aktuelle Konfiguration in eine Datei zu speichern.
+   - Grund: Ermöglichen des Speicherns von Benutzereinstellungen.
+   - Code:
+     out << "camera=" << cameraSelector->currentText() << "\n";
+     out << "qt-preview=" << previewSelector->currentText() << "\n";
+     out << "timeout=" << timeoutSelector->currentText() << "\n";
+
+4. [Datum: 10.04.2025]
+   - Datei: `MainWindow.cpp`
+   - Änderung: Debugging-Ausgaben in `startRpiCamApp()` hinzugefügt, um den vollständigen Befehl und die Vorschauoptionen zu überprüfen.
+   - Grund: Verbesserung der Nachvollziehbarkeit bei der Ausführung.
+   - Code:
+     qDebug() << "Full command:" << fullCommand;
+     qDebug() << "Preview Option:" << preview;
+
+5. [Datum: 10.04.2025]
+   - Datei: `MainWindow.cpp`
+   - Änderung: Methode `updateButtonVisibility()` hinzugefügt, um die Sichtbarkeit der Start- und Stop-Buttons basierend auf dem Prozessstatus zu aktualisieren.
+   - Grund: Verbesserung der Benutzeroberfläche.
+   - Code:
+     if (process.state() == QProcess::NotRunning) {
+         startStopButton->setText("Start");
+         connect(startStopButton, &QPushButton::clicked, this, &MainWindow::startRpiCamApp);
+     } else if (process.state() == QProcess::Running) {
+         startStopButton->setText("Stop");
+         connect(startStopButton, &QPushButton::clicked, this, &MainWindow::stopRpiCamApp);
+     }
+
+6. [Datum: 10.04.2025]
+   - Datei: `MainWindow.cpp`
+   - Änderung: Methode `startRpiCamApp()` erweitert, um die Post-Process-Datei und die Vorschauoptionen hinzuzufügen.
+   - Grund: Unterstützung zusätzlicher Optionen.
+   - Code:
+     if (!postProcessFile.isEmpty()) {
+         arguments << "--post-process-file" << postProcessFilePath;
+     }
+     if (!Box.isEmpty()) {
+         arguments << "--preview" << Box;
+     }
+
+7. [Datum: 11.04.2025]
+   - Datei: `MainWindow.cpp`
+   - Änderung: Methode `stopRpiCamApp()` angepasst, um ein `SIGINT`-Signal an den Prozess zu senden.
+   - Grund: Sicherstellen, dass der Prozess sauber beendet wird und Videodateien korrekt finalisiert werden.
+   - Code:
+     kill(process.processId(), SIGINT);
+
+8. [Datum: 11.04.2025]
+   - Datei: `MainWindow.cpp`
+   - Änderung: Header-Dateien `<csignal>` und `<unistd.h>` hinzugefügt.
+   - Grund: Ermöglichen der Verwendung von `kill()` und `SIGINT`.
+   - Code:
+     #include <csignal>
+     #include <unistd.h>
+
+9. [Datum: 11.04.2025]
+   - Datei: `MainWindow.cpp`
+   - Änderung: Debugging-Ausgaben in `stopRpiCamApp()` hinzugefügt.
+   - Grund: Überprüfung, ob der Prozess korrekt beendet wird.
+   - Code:
+     qDebug() << "Stopping process with PID:" << process.processId();
+     qDebug() << "Process terminated.";
+
+10. [Datum: 11.04.2025]
+    - Datei: `MainWindow.cpp`
+    - Änderung: Fehlerbehebung bei der Initialisierung von `process` im Konstruktor.
+    - Grund: Sicherstellen, dass `process` korrekt initialisiert wird.
+    - Code:
+      process(this);
+
+11. [Datum: 11.04.2025]
+    - Datei: `MainWindow.cpp`
+    - Änderung: Methode `updateButtonVisibility()` aufgerufen, um die Sichtbarkeit der Buttons nach Start/Stopp zu aktualisieren.
+    - Grund: Verbesserung der Benutzeroberfläche.
+    - Code:
+      updateButtonVisibility();

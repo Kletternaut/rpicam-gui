@@ -1,0 +1,8 @@
+camera=1
+qt-preview=--qt-preview
+timeout=5000
+preview=280,240,600,400
+width=2028
+height=1520
+framerate=40
+post-process-file=hdr.json
