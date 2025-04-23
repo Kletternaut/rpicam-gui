@@ -1,5 +1,6 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
+#define APP_VERSION "0.0.57"
 
 #include <QMainWindow>
 #include <QComboBox>
@@ -14,66 +15,97 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QMap>
+#include <QResizeEvent>
+#include <QDebug>
+#include "SelectionOverlay.h"
+#include "CustomLineEdit.h" // Füge die benutzerdefinierte Klasse hinzu
+#include <QShowEvent> // Für QShowEvent
+#include <QSettings> // Füge diese Zeile hinzu
+#include <QString> // Füge diese Zeile hinzu
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget *parent = nullptr); // Nur Deklaration
     ~MainWindow();
 
+protected:
+    void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override; // Deklaration der showEvent-Methode
+
 private slots:
-    void startRpiCamApp();
-    void stopRpiCamApp(); // Methode zum Stoppen des Prozesses
-    void updateParameterFields(); // Aktualisiert die Parameter-Felder basierend auf der App-Auswahl
-    void parseListCamerasOutput(const QString &output); // Parse camera list output and display in GUI
-    void showHelp(); // Methode zum Anzeigen der Hilfe
-    void showAboutDialog(); // Methode zum Anzeigen des "About"-Dialogs
+    void startRpiCamApp(); // Nur Deklaration
+    void stopRpiCamApp();
+    void updateParameterFields();
+    void parseListCamerasOutput(const QString &output);
+    void showHelp();
+    void showAboutDialog();
+    void updateBoxInputFromSelection(const QRect &selection);
+    void openGuiSetupDialog(); // Neue Methode für GUI-Setup
+    void loadGuiConfiguration(); // Neue Methode für GUI-Konfiguration
 
 private:
-    void createMenus(); // Deklaration der Methode hinzufügen
-    QComboBox *appSelector; // Dropdown für die Auswahl der App
-    QComboBox *cameraSelector; // Dropdown für die Auswahl der Kamera
-    QTextEdit *cameraInfo; // Info-Feld für Kamera-Details
-    QFormLayout *parameterLayout; // Layout für dynamische Parameter
-    QWidget *parameterWidget; // Container für Parameter-Felder
-    QLineEdit *parameterInput; // Eingabefeld für Parameter
-    QTextEdit *outputLog; // Textfeld für die Ausgabe
-    QPushButton *startButton; // Start-Button
-    QMap<QString, QString> cameraDetails; // Map für Kamera-Details
-    QComboBox *resolutionSelector; // Dropdown für Auflösungen
-    QComboBox *framerateSelector; // Dropdown für Framerates
-    QComboBox *previewSelector; // Dropdown für Preview-Optionen
-    QLineEdit *outputFileName; // Feld für den Output-Dateinamen
-    QPushButton *browseButton; // Button für den "Speichern unter"-Dialog
-    QLineEdit *timeoutInput; // Eingabefeld für das Timeout
-    QComboBox *timeoutSelector; // Dropdown für Timeout-Werte
-    // QPushButton *helpButton; // Entfernt
-    QLineEdit *timelapseInput; // Eingabefeld für Timelapse-Intervall
-    QCheckBox *segmentationCheckbox; // Checkbox für Dateinamensegmentierung
-    QProcess process; // Prozess für die gestartete App
-    QPushButton *stopButton; // Stop-Button für den Prozess
-    QPushButton *startStopButton; // Ein Button für Start und Stop
-    QComboBox *postProcessFileSelector; // Dropdown für Post-Process-Dateien
-    QPushButton *postProcessFileBrowseButton; // Button für den Dateiauswahldialog
-    QLineEdit *customPreviewInput; // Eingabefeld für die --preview-Option
-    QComboBox *codecSelector; // Dropdown für --codec
-    QLabel *codecLabel; // Label für das Codec-Dropdown
-    QLineEdit *BoxInput; // Eingabefeld für die --preview-Option
-    QTextEdit *debugLog; // Debug-Log-Feld
-
-    void updateCameraInfo(int index); // Methode zum Aktualisieren der Kamera-Details
-    void updateFramerateOptions(const QString &resolution); // Aktualisiert die Framerate-Liste
-    void openSaveFileDialog();   // Methode zum Öffnen des "Speichern unter"-Dialogs
-    void updateTimelapseField();     // Methode zum Anzeigen des Timelapse-Feldes
-    void updateButtonVisibility(); // Aktualisiert die Sichtbarkeit von Start/Stop
-    void updateCodecVisibility(const QString &selectedApp); // Methode zur Steuerung der Sichtbarkeit
+    void createMenus();
+    QComboBox *appSelector;
+    QComboBox *cameraSelector;
+    QTextEdit *cameraInfo;
+    QFormLayout *parameterLayout;
+    QWidget *parameterWidget;
+    QLineEdit *parameterInput;
+    QTextEdit *outputLog;
+    QPushButton *startButton;
+    QMap<QString, QString> cameraDetails;
+    QComboBox *resolutionSelector;
+    QComboBox *framerateSelector;
+    QComboBox *previewSelector;
+    QLineEdit *outputFileName;
+    QPushButton *browseButton;
+    QLineEdit *timeoutInput;
+    QComboBox *timeoutSelector;
+    QLineEdit *timelapseInput;
+    QCheckBox *segmentationCheckbox;
+    QProcess process;
+    QPushButton *stopButton;
+    QPushButton *startStopButton;
+    QComboBox *postProcessFileSelector;
+    QPushButton *postProcessFileBrowseButton;
+    QLineEdit *customPreviewInput;
+    QComboBox *codecSelector;
+    QLabel *codecLabel;
+    CustomLineEdit *BoxInput; // Ersetze QLineEdit durch CustomLineEdit
+    QTextEdit *debugLog;
+    QCheckBox *timestampCheckbox;
+    QCheckBox *autoNamingCheckbox; // Deklariere die Checkbox hier
+    SelectionOverlay *selectionOverlay = nullptr; // Initialisiere als nullptr
+    QComboBox *awbSelector; // AWB-Auswahl
+    QSlider *sharpnessSlider; // Slider für Sharpness
+    QLineEdit *sharpnessInput; // Eingabefeld für Sharpness
+    QSlider *evSlider;           // Slider für EV
+    QLineEdit *evInput;          // Eingabefeld für EV
+    QSlider *gainSlider;         // Slider für Gain
+    QLineEdit *gainInput;        // Eingabefeld für Gain
+    QSlider *brightnessSlider;   // Slider für Brightness
+    QLineEdit *brightnessInput;  // Eingabefeld für Brightness
+    QSlider *contrastSlider;     // Slider für Contrast
+    QLineEdit *contrastInput;    // Eingabefeld für Contrast
+    QSlider *saturationSlider;   // Slider für Saturation
+    QLineEdit *saturationInput;  // Eingabefeld für Saturation
+    void updateCameraInfo(int index);
+    void updateFramerateOptions(const QString &resolution);
+    void openSaveFileDialog();
+    void updateTimelapseField();
+    void updateButtonVisibility();
+    void updateCodecVisibility(const QString &selectedApp);
     void saveConfigurationToFile(const QString &filePath);
     void loadConfigurationFromFile(const QString &filePath);
-    void setCameraSelectorText(const QString &value) {
-        cameraSelector->setCurrentText(value);
-        cameraSelector->update(); // Aktualisiert die Anzeige
-    }
+    void setupLayout(); // Deklaration der Methode
+    void updateResetButtonColor(QPushButton *button, double currentValue, double defaultValue);
+    QString calculateBoxInput(int additionalOffsetY = 0);
+    QString guiOutputFilePath; // Eindeutige Benennung für GUI-Output-Pfad
+    QString guiPostProcessFilePath; // Eindeutige Benennung für GUI-Post-Process-Pfad
+    QString configFilePath; // Variable für den Pfad der Konfigurationsdatei
+    void parseConfigurationFile(const QString &filePath); // Deklaration der Methode
 };
 
 #endif // MAINWINDOW_H

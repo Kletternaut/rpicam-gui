@@ -1,0 +1,7 @@
+camera=0
+qt-preview=
+preview=277,365,362,272
+width=2028
+height=1520
+framerate=40
+codec=h264

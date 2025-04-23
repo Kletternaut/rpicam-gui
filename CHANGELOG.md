@@ -96,3 +96,26 @@
     - Grund: Verbesserung der Benutzeroberfläche.
     - Code:
       updateButtonVisibility();
+
+12. [Datum: 13.04.2025]
+    - Datei: `MainWindow.cpp`
+    - Änderung: Tooltips für verschiedene GUI-Elemente hinzugefügt.
+    - Grund: Verbesserung der Benutzerfreundlichkeit durch Bereitstellung von Hilfetexten.
+    - Code:
+      appSelector->setToolTip("Select the application to run (e.g., rpicam-still or rpicam-vid).");
+      cameraSelector->setToolTip("Select the camera to use.");
+      resolutionSelector->setToolTip("Choose the resolution for the camera.");
+      framerateSelector->setToolTip("Select the desired framerate.");
+      previewSelector->setToolTip("Choose a preview mode for the camera.");
+      outputFileName->setToolTip("Specify the output file name.");
+      browseButton->setToolTip("Browse for a location to save the output file.");
+      timestampCheckbox->setToolTip("Enable this option to add a timestamp to the output file.");
+      segmentationCheckbox->setToolTip("Enable segmentation to split output files into parts.");
+      timelapseInput->setToolTip("Set the interval for timelapse photography.");
+
+13. [Datum: 13.04.2025]
+    - Datei: `MainWindow.cpp`
+    - Änderung: Fehler behoben, bei dem `QDateTime` nicht korrekt eingebunden war.
+    - Grund: Sicherstellen, dass die Klasse `QDateTime` verwendet werden kann.
+    - Code:
+      #include <QDateTime>

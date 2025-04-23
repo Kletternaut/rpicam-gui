@@ -1,8 +1,12 @@
 .vscode
 output/
 build/
+content_output/
+config/
+folder01/
 *.log
 *.tmp
 *.bak
 *.pro.user
 *.qmake.stash
+simplescreenrecorder-idle.svg
