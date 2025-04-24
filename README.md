@@ -2,12 +2,17 @@
 
 ![Splash Screen](resources/images/rpicam-gui_splash2.gif)
 
-
 **rpicam-gui** is a desktop application for controlling the Raspberry Pi's rpicam-apps (`rpicam-vid`, `rpicam-jpeg`, `rpicam-still`, `rpicam-raw`, `rpicam-hello`). The application provides a user-friendly interface to configure and start various parameters of these rpicam-apps.
 
 **rpicam-gui** ist eine Desktop-Anwendung zur Steuerung der rpicam-Apps (`rpicam-vid`, `rpicam-jpeg`, `rpicam-still`, `rpicam-raw`, `rpicam-hello`). Die Anwendung bietet eine benutzerfreundliche Oberfläche, um verschiedene Parameter der rpicam-apps zu konfigurieren und diese Apps zu starten.
 
----
+
+**Demo Video**
+The video was recorded on a Raspberry Pi 5 / 8GB with a Dual HQ-Camera, Pimoroni NVMe Base Duo with an NVMe SSD, and a Hailo8 AI processor via xrdp Remote Desktop. It showcases the early and not yet error-free rpicam-gui version 0.0.65, demonstrating its basic usage and features. The primary goal of this app was and still is to fulfill the need for a quickly operable camera.
+
+Das video wurde auf einem Raspberry Pi5 / 8GB mit Dual HQ-Camera,Pimoroni NVMe Base Duo mit einer NVMe-SSD und einem Hailo8-AI Prozessor über xrdp-Remote Desktop aufgenommen. Es zeigt die noch frühe und nicht fehlerfreie rpicam-gui Version 0.0.65. in der grundlegenden Handhabung und deren Features. Das dem allenvoran gestellte Ziel dieser App war und ist aus dem Bedürfnis entstanden, eine schnell aufnahmefähige Camera zu haben.
+
+![Splash Screen](resources/videos/rpicam-gui.mp4)
 
 ## **Projektstruktur**
 
