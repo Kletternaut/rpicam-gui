@@ -12,7 +12,9 @@ The video was recorded on a Raspberry Pi 5 / 8GB with a Dual HQ-Camera, Pimoroni
 
 Das video wurde auf einem Raspberry Pi5 / 8GB mit Dual HQ-Camera,Pimoroni NVMe Base Duo mit einer NVMe-SSD und einem Hailo8-AI Prozessor über xrdp-Remote Desktop aufgenommen. Es zeigt die noch frühe und nicht fehlerfreie rpicam-gui Version 0.0.65. in der grundlegenden Handhabung und deren Features. Das dem allenvoran gestellte Ziel dieser App war und ist aus dem Bedürfnis entstanden, eine schnell aufnahmefähige Camera zu haben.
 
-![Splash Screen](resources/videos/rpicam-gui.mp4)
+[Download Demo Video](resources/videos/rpicam-gui.mp4)
+
+[Watch Demo Video](https://drive.google.com/file/d/1teEZzaeJy3l2NNtE6lXkUwYyNVEsop4r/view?usp=drive_link)
 
 ## **Projektstruktur**
 
