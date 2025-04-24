@@ -1,5 +1,8 @@
 # rpicam-gui
 
+![Splash Screen](resources/images/rpicam-gui_splash2.gif)
+
+
 **rpicam-gui** is a desktop application for controlling the Raspberry Pi's rpicam-apps (`rpicam-vid`, `rpicam-jpeg`, `rpicam-still`, `rpicam-raw`, `rpicam-hello`). The application provides a user-friendly interface to configure and start various parameters of these rpicam-apps.
 
 **rpicam-gui** ist eine Desktop-Anwendung zur Steuerung der rpicam-Apps (`rpicam-vid`, `rpicam-jpeg`, `rpicam-still`, `rpicam-raw`, `rpicam-hello`). Die Anwendung bietet eine benutzerfreundliche Oberfläche, um verschiedene Parameter der rpicam-apps zu konfigurieren und diese Apps zu starten.
