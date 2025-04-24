@@ -1,10 +1,6 @@
 [Desktop Entry]
-Type=Application
+Type=Link
 Name=rpicam-gui
-Comment[de]=Eine GUI für rpicam-apps
-Icon=simplescreenrecorder
-Exec=rpicam-gui --logfile
-Terminal=false
-Categories=AudioVideo;Video;Recorder;Qt;
-Keywords=camera recording, rpicam-apps,live streaming;
-StartupNotify=true
+Icon=rpicam-gui_button
+URL=/home/admin/rpicam-gui/rpicam-gui
+Name[de_DE]=rpicam-gui

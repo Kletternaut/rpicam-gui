@@ -1,6 +1,5 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
-#define APP_VERSION "0.0.57"
 
 #include <QMainWindow>
 #include <QComboBox>
@@ -18,32 +17,33 @@
 #include <QResizeEvent>
 #include <QDebug>
 #include "SelectionOverlay.h"
-#include "CustomLineEdit.h" // Füge die benutzerdefinierte Klasse hinzu
-#include <QShowEvent> // Für QShowEvent
-#include <QSettings> // Füge diese Zeile hinzu
-#include <QString> // Füge diese Zeile hinzu
+#include "CustomLineEdit.h"
+#include <QShowEvent>
+#include <QSettings>
+#include <QString>
+#include "../Version.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr); // Nur Deklaration
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
-    void showEvent(QShowEvent *event) override; // Deklaration der showEvent-Methode
+    void showEvent(QShowEvent *event) override;
 
 private slots:
-    void startRpiCamApp(); // Nur Deklaration
+    void startRpiCamApp();
     void stopRpiCamApp();
     void updateParameterFields();
     void parseListCamerasOutput(const QString &output);
     void showHelp();
     void showAboutDialog();
     void updateBoxInputFromSelection(const QRect &selection);
-    void openGuiSetupDialog(); // Neue Methode für GUI-Setup
-    void loadGuiConfiguration(); // Neue Methode für GUI-Konfiguration
+    void openGuiSetupDialog();
+    void loadGuiConfiguration();
 
 private:
     void createMenus();
@@ -73,24 +73,24 @@ private:
     QLineEdit *customPreviewInput;
     QComboBox *codecSelector;
     QLabel *codecLabel;
-    CustomLineEdit *BoxInput; // Ersetze QLineEdit durch CustomLineEdit
+    CustomLineEdit *BoxInput;
     QTextEdit *debugLog;
     QCheckBox *timestampCheckbox;
-    QCheckBox *autoNamingCheckbox; // Deklariere die Checkbox hier
-    SelectionOverlay *selectionOverlay = nullptr; // Initialisiere als nullptr
-    QComboBox *awbSelector; // AWB-Auswahl
-    QSlider *sharpnessSlider; // Slider für Sharpness
-    QLineEdit *sharpnessInput; // Eingabefeld für Sharpness
-    QSlider *evSlider;           // Slider für EV
-    QLineEdit *evInput;          // Eingabefeld für EV
-    QSlider *gainSlider;         // Slider für Gain
-    QLineEdit *gainInput;        // Eingabefeld für Gain
-    QSlider *brightnessSlider;   // Slider für Brightness
-    QLineEdit *brightnessInput;  // Eingabefeld für Brightness
-    QSlider *contrastSlider;     // Slider für Contrast
-    QLineEdit *contrastInput;    // Eingabefeld für Contrast
-    QSlider *saturationSlider;   // Slider für Saturation
-    QLineEdit *saturationInput;  // Eingabefeld für Saturation
+    QCheckBox *autoNamingCheckbox;
+    SelectionOverlay *selectionOverlay = nullptr;
+    QComboBox *awbSelector;
+    QSlider *sharpnessSlider;
+    QLineEdit *sharpnessInput;
+    QSlider *evSlider;
+    QLineEdit *evInput;
+    QSlider *gainSlider;
+    QLineEdit *gainInput;
+    QSlider *brightnessSlider;
+    QLineEdit *brightnessInput;
+    QSlider *contrastSlider;
+    QLineEdit *contrastInput;
+    QSlider *saturationSlider;
+    QLineEdit *saturationInput;
     void updateCameraInfo(int index);
     void updateFramerateOptions(const QString &resolution);
     void openSaveFileDialog();
@@ -99,13 +99,23 @@ private:
     void updateCodecVisibility(const QString &selectedApp);
     void saveConfigurationToFile(const QString &filePath);
     void loadConfigurationFromFile(const QString &filePath);
-    void setupLayout(); // Deklaration der Methode
+    void setupLayout();
     void updateResetButtonColor(QPushButton *button, double currentValue, double defaultValue);
     QString calculateBoxInput(int additionalOffsetY = 0);
-    QString guiOutputFilePath; // Eindeutige Benennung für GUI-Output-Pfad
-    QString guiPostProcessFilePath; // Eindeutige Benennung für GUI-Post-Process-Pfad
-    QString configFilePath; // Variable für den Pfad der Konfigurationsdatei
-    void parseConfigurationFile(const QString &filePath); // Deklaration der Methode
-};
+    QString guiOutputFilePath;
+    QString guiPostProcessFilePath;
+    QString configFilePath;
+    void parseConfigurationFile(const QString &filePath);
+    void initializeSelectionOverlay();
+    void initializeBoxInput();
+    void updateSelectionOverlayGeometry();
+    void setupLayouts();
+    void setupInputLayout();
+    void setupOutputLayout();
+    void setupSliderLayout();
+    void setupAdvancedOptionsLayout();
 
+    QVBoxLayout *mainLayout;
+    QCheckBox *doubleSizeCheckbox; // Checkbox für die Verdopplung der Größe
+};
 #endif // MAINWINDOW_H

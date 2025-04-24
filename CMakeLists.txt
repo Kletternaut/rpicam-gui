@@ -23,8 +23,6 @@ set(SOURCES
     src/gui/MainWindow.cpp
     src/gui/SelectionOverlay.cpp
     src/gui/GuiSetupDialog.cpp # Aktualisierter Dateiname
-    src/models/RpiCamParams.cpp
-    src/controllers/RpiCamController.cpp
     src/utils/CommandExecutor.cpp
     src/utils/DebugLogger.cpp
     src/main.cpp
@@ -34,24 +32,19 @@ set(HEADERS
     src/gui/MainWindow.h
     src/gui/CustomLineEdit.h
     src/gui/GuiSetupDialog.h # Aktualisierter Dateiname
-    src/models/RpiCamParams.h
-    src/controllers/RpiCamController.h
     src/utils/CommandExecutor.h
     src/utils/DebugLogger.h
     src/Version.h
 )
 
-# Add executable
 add_executable(rpicam-gui ${SOURCES} ${HEADERS})
 
-# Link Qt5 libraries
 target_link_libraries(${PROJECT_NAME} Qt5::Widgets)
 
-# Testprogramm hinzufügen
+qt5_add_resources(rpicam-gui "resources/resources.qrc")
+
 add_executable(test-app src/gui/test.cpp)
 
-# Qt-Bibliotheken für das Testprogramm verlinken
 target_link_libraries(test-app Qt5::Widgets)
 
-# Setze den Include-Pfad
 target_include_directories(${PROJECT_NAME} PRIVATE src/gui src/utils)

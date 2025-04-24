@@ -119,3 +119,61 @@
     - Grund: Sicherstellen, dass die Klasse `QDateTime` verwendet werden kann.
     - Code:
       #include <QDateTime>
+
+14. [Datum: 24.04.2025]
+    - Datei: `MainWindow.cpp`
+    - Änderung: `x2`-Checkbox hinzugefügt, um die Größe des Vorschaufensters zu verdoppeln.
+    - Grund: Verbesserung der Benutzerfreundlichkeit durch eine einfache Möglichkeit, die Vorschaugröße zu ändern.
+    - Code:
+      doubleSizeCheckbox = new QCheckBox("x2", this);
+      connect(doubleSizeCheckbox, &QCheckBox::stateChanged, this, [this](int state) {
+          Q_UNUSED(state);
+          QString updatedBoxValue = calculateBoxInput(+30);
+          BoxInput->setText(updatedBoxValue);
+          qDebug() << "BoxInput updated after x2 checkbox state change:" << updatedBoxValue;
+      });
+
+15. [Datum: 24.04.2025]
+    - Datei: `MainWindow.cpp`
+    - Änderung: Funktion `calculateBoxInput` erweitert, um die Verdopplung der Vorschaugröße zu unterstützen.
+    - Grund: Dynamische Anpassung der Vorschaugröße basierend auf dem Zustand der `x2`-Checkbox.
+    - Code:
+      if (doubleSizeCheckbox && doubleSizeCheckbox->isChecked()) {
+          boxWidth *= 2;
+          boxHeight *= 2;
+      }
+
+16. [Datum: 24.04.2025]
+    - Datei: `MainWindow.cpp`
+    - Änderung: Versionsanzeige beim Programmstart hinzugefügt.
+    - Grund: Verbesserung der Benutzerfreundlichkeit durch Anzeige der aktuellen Version.
+    - Code:
+      QLabel *versionLabel = new QLabel("Version: 1.0.0", this);
+      splashScreenLayout->addWidget(versionLabel);
+
+17. [Datum: 24.04.2025]
+    - Datei: `resources.qrc`, `MainWindow.cpp`
+    - Änderung: Splash Screen mit animierter Grafik implementiert.
+    - Grund: Visuelles Feedback beim Start der Anwendung.
+    - Code:
+      QMovie *splashMovie = new QMovie(":/images/rpicam-gui_splash2.gif");
+      splashLabel->setMovie(splashMovie);
+      splashMovie->start();
+
+18. [Datum: 24.04.2025]
+    - Datei: `MainWindow.cpp`, `MainWindow.h`
+    - Änderung: Versionsanzeige im "About"-Dialog wieder hinzugefügt.
+    - Grund: Verbesserung der Benutzerfreundlichkeit durch Anzeige der aktuellen Version im "About"-Dialog.
+    - Code:
+      void MainWindow::showAboutDialog() {
+          QMessageBox aboutBox(this);
+          aboutBox.setWindowTitle("About rpicam-gui");
+          aboutBox.setText(
+              "<h3>rpicam-gui</h3>"
+              "<p>Version: 1.0.0</p>"
+              "<p>rpicam-gui ist eine Desktop-Anwendung zur Steuerung der rpicam-Apps.</p>"
+              "<p>Entwickelt von Kletternaut und Beitragenden.</p>"
+          );
+          aboutBox.setIcon(QMessageBox::Information);
+          aboutBox.exec();
+      }

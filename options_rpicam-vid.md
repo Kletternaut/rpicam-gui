@@ -1,4 +1,3 @@
-admin@raspi5:~/rpicam-gui/build $ rpicam-vid -h
 Valid options are:
   -h [ --help ] [=arg(=1)] (=0)         Print this help message
   --version [=arg(=1)] (=0)             Displays the build version number
