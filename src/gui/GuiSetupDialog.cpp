@@ -23,7 +23,7 @@ GuiSetupDialog::GuiSetupDialog(QWidget *parent)
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
     // Config File Path Group
-    QGroupBox *configGroup = new QGroupBox("Configuration File Path", this);
+    QGroupBox *configGroup = new QGroupBox("rpicam-gui Configuration File Path", this);
     QVBoxLayout *configLayout = new QVBoxLayout(configGroup);
     configFilePathEdit = new QLineEdit(this); // Initialisiere das Eingabefeld
     QPushButton *browseConfigFileButton = new QPushButton("Browse", this);

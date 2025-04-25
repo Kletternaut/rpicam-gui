@@ -26,6 +26,7 @@
 #include "../utils/DebugLogger.h"
 #include "GuiSetupDialog.h" // Externe Datei für den Setup-Dialog
 #include "../Version.h"
+#include <QGroupBox>
 const double DEFAULT_SHARPNESS = 1.0;
 const double DEFAULT_EV = 0.0;
 const double DEFAULT_GAIN = 0.0;
@@ -89,8 +90,12 @@ MainWindow::MainWindow(QWidget *parent)
     appSelector->addItems({"rpicam-vid", "rpicam-jpeg", "rpicam-still", "rpicam-raw", "rpicam-hello", "rpicam-focus", "rpicam-focus008"});
     timelapseInput->setPlaceholderText("Interval (ms)");
     timelapseInput->setVisible(true); // Standardmäßig ausgeblendet
-    previewSelector->addItems({"", "--fullscreen", "--qt-preview", "-n" }); // Leere Option hinzufügen
-    previewSelector->setCurrentText("--qt-preview"); // Standardwert setzen
+    previewSelector->clear();
+    previewSelector->addItem("", "");
+    previewSelector->addItem("Fullscreen", "--fullscreen");
+    previewSelector->addItem("Qt-Preview", "--qt-preview");
+    previewSelector->addItem("No Preview", "--nopreview");
+    previewSelector->setCurrentIndex(previewSelector->findData("--qt-preview")); // Standardwert setzen
     postProcessFileSelector->setEditable(true); // Benutzerdefinierte Eingaben erlauben
     postProcessFileSelector->addItems({
         "annotate_cv.json",
@@ -134,15 +139,25 @@ MainWindow::MainWindow(QWidget *parent)
     BoxInput->setPlaceholderText("Double-click to toggle overlay");
     BoxInput->setToolTip("Double-click to toggle the overlay visibility.");
     BoxInput->setFixedWidth(150); // Setze die Breite des Overlay-Input-Felds auf 150 Pixel
+// Erstelle eine QGroupBox für Overlay-Optionen
+    QGroupBox *overlayGroup = new QGroupBox("", this);
+    overlayGroup->setFixedWidth(330); // Breite der QGroupBox auf 330 Pixel setzen
+    QVBoxLayout *overlayLayout = new QVBoxLayout;
+
+    // Füge die Elemente zur QGroupBox hinzu
         auto *boxLayout = new QHBoxLayout;
     boxLayout->addWidget(new QLabel("Overlay:", this));
     boxLayout->addWidget(BoxInput);
     doubleSizeCheckbox = new QCheckBox("x2", this);
     boxLayout->addWidget(doubleSizeCheckbox);
-    auto *resetButton = new QPushButton("x", this); // Reset-Button erstellen
-    resetButton->setFixedWidth(20); // Breite des Buttons auf 20 Pixel setzen
-    boxLayout->addWidget(resetButton); // Reset-Button rechts von BoxInput hinzufügen
-    mainLayout->addLayout(boxLayout);
+    auto *resetButton = new QPushButton("x", this);
+    resetButton->setFixedWidth(20);
+    boxLayout->addWidget(resetButton);
+    overlayLayout->addLayout(boxLayout);
+    overlayGroup->setLayout(overlayLayout);
+
+    // Füge die QGroupBox zum Hauptlayout hinzu
+    mainLayout->addWidget(overlayGroup);
     connect(resetButton, &QPushButton::clicked, this, [this]() {
         QString defaultBoxValue = calculateBoxInput(+30);
         BoxInput->setText(defaultBoxValue);
@@ -228,7 +243,11 @@ connect(doubleSizeCheckbox, &QCheckBox::stateChanged, this, [this](int state) {
     connect(browseButton, &QPushButton::clicked, this, &MainWindow::openSaveFileDialog);
     connect(startStopButton, &QPushButton::clicked, this, &MainWindow::startRpiCamApp);
     connect(postProcessFileBrowseButton, &QPushButton::clicked, this, [this]() {
-    QString fileName = QFileDialog::getOpenFileName(this, "Select Post-Process File", "", "JSON Files (*.json);;All Files (*.*)");
+    QString initialPath = postProcessFileSelector->currentText();
+    if (initialPath.isEmpty() || !QFileInfo(initialPath).isAbsolute()) {
+        initialPath = QDir(guiPostProcessFilePath).filePath(initialPath);
+    }
+    QString fileName = QFileDialog::getOpenFileName(this, "Select Post-Process File", initialPath, "JSON Files (*.json);;All Files (*.*)");
     if (!fileName.isEmpty()) {
         postProcessFileSelector->setCurrentText(fileName); // Setze den ausgewählten Dateinamen
     }
@@ -425,12 +444,12 @@ mainLayout->addLayout(evLayout);
     brightnessInput->setFixedWidth(40);
     contrastInput->setFixedWidth(40);
     saturationInput->setFixedWidth(40);
-    sharpnessSlider->setFixedWidth(300);
-    evSlider->setFixedWidth(300);
-    gainSlider->setFixedWidth(300);
-    brightnessSlider->setFixedWidth(300);
-    contrastSlider->setFixedWidth(300);
-    saturationSlider->setFixedWidth(300);
+    sharpnessSlider->setFixedWidth(270);
+    evSlider->setFixedWidth(270);
+    gainSlider->setFixedWidth(270);
+    brightnessSlider->setFixedWidth(270);
+    contrastSlider->setFixedWidth(270);
+    saturationSlider->setFixedWidth(270);
     connect(evSlider, &QSlider::valueChanged, this, [this, evResetButton](int value) {
         double ev = value / 10.0;
         evInput->setText(QString::number(ev, 'f', 1));
@@ -480,10 +499,6 @@ mainLayout->addLayout(evLayout);
         double saturation = text.toDouble();
         saturationSlider->setValue(static_cast<int>(saturation * 10));
         updateResetButtonColor(saturationResetButton, saturation, DEFAULT_SATURATION);
-    });
-    connect(selectionOverlay, &SelectionOverlay::overlayClosed, this, [this]() {
-    });
-    connect(selectionOverlay, &SelectionOverlay::overlayClosed, this, [this]() {
     });
     connect(selectionOverlay, &SelectionOverlay::overlayClosed, this, [this]() {
     QRect selectedArea = selectionOverlay->getSelectedArea();
@@ -551,8 +566,9 @@ void MainWindow::startRpiCamApp() {
               << "--width" << width
               << "--height" << height
               << "--framerate" << framerate;
-    if (!preview.isEmpty()) {
-        arguments << preview;
+    QString previewValue = previewSelector->currentData().toString();
+    if (!previewValue.isEmpty()) {
+        arguments << previewValue; // Füge den Parameter mit Präfix hinzu
     }
     if (!timeout.isEmpty()) {
         bool ok;
@@ -760,119 +776,208 @@ void MainWindow::updateCodecVisibility(const QString &selectedApp) {
 }
 void MainWindow::saveConfigurationToFile(const QString &filePath) {
     QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-outputLog->append("Failed to save configuration to " + filePath);
-        return;
-    }
-
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&file);
-        QMap<QString, QString> config = {
-            {"camera", cameraSelector->currentText()},
-        {"preview", previewSelector->currentText()},
-        {"timeout", timeoutSelector->currentText()},
-        {"width", resolutionSelector->currentText().split("x").value(0)},
-        {"height", resolutionSelector->currentText().split("x").value(1)},
-        {"framerate", framerateSelector->currentText()},
-        {"awb", awbSelector->currentText()},
-        {"sharpness", sharpnessInput->text()},
-        {"ev", evInput->text()},
-        {"gain", gainInput->text()},
-        {"brightness", brightnessInput->text()},
-        {"contrast", contrastInput->text()},
-        {"saturation", saturationInput->text()},
-        {"post-process-file", postProcessFileSelector->currentText()},
-        {"output", outputFileName->text()},
-        {"timelapse", timelapseInput->text()}
-    };
 
-    for (auto it = config.begin(); it != config.end(); ++it) {
-        if (!it.value().isEmpty()) {
-            out << it.key() << "=" << it.value() << "\n";
+        // Speichere die Kamera, falls gesetzt
+        if (!cameraSelector->currentText().isEmpty()) {
+            out << "camera=" << cameraSelector->currentText() << "\n";
         }
-}
+
+        // Speichere qt-preview, fullscreen oder nopreview
+        QString previewValue = previewSelector->currentData().toString();
+        if (previewValue == "--qt-preview") {
+            out << "qt-preview=\n"; // Speichere qt-preview
+        } else if (previewValue == "--fullscreen") {
+            out << "fullscreen=1\n"; // Speichere fullscreen
+        } else if (previewValue == "--nopreview") {
+            out << "nopreview=1\n"; // Speichere nopreview
+        }
+
+        // Speichere Vorschaufenstermaße (preview=x,y,w,h)
+        if (!BoxInput->text().isEmpty()) {
+            out << "preview=" << BoxInput->text() << "\n";
+        }
+
+        QString width = resolutionSelector->currentText().split("x").value(0);
+        QString height = resolutionSelector->currentText().split("x").value(1);
+        if (!width.isEmpty() && !height.isEmpty()) {
+            out << "width=" << width << "\n";
+            out << "height=" << height << "\n";
+        }
+
+        if (!framerateSelector->currentText().isEmpty()) {
+            out << "framerate=" << framerateSelector->currentText() << "\n";
+        }
+
+        if (awbSelector->currentText() != "auto") {
+            out << "awb=" << awbSelector->currentText() << "\n";
+        }
+
+        double sharpness = sharpnessInput->text().toDouble();
+        if (sharpness != DEFAULT_SHARPNESS) {
+            out << "sharpness=" << QString::number(sharpness, 'f', 1) << "\n";
+        }
+
+        double ev = evInput->text().toDouble();
+        if (ev != DEFAULT_EV) {
+            out << "ev=" << QString::number(ev, 'f', 1) << "\n";
+        }
+
+        double gain = gainInput->text().toDouble();
+        if (gain != DEFAULT_GAIN) {
+            out << "gain=" << QString::number(gain, 'f', 1) << "\n";
+        }
+
+        double brightness = brightnessInput->text().toDouble();
+        if (brightness != DEFAULT_BRIGHTNESS) {
+            out << "brightness=" << QString::number(brightness, 'f', 1) << "\n";
+        }
+
+        double contrast = contrastInput->text().toDouble();
+        if (contrast != DEFAULT_CONTRAST) {
+            out << "contrast=" << QString::number(contrast, 'f', 1) << "\n";
+        }
+
+        double saturation = saturationInput->text().toDouble();
+        if (saturation != DEFAULT_SATURATION) {
+            out << "saturation=" << QString::number(saturation, 'f', 1) << "\n";
+        }
+
+        // Speichere den Codec, wenn die App rpicam-vid ist
+        if (appSelector->currentText() == "rpicam-vid") {
+            QString codec = codecSelector->currentText();
+            if (!codec.isEmpty()) { // Speichere den Codec nur, wenn er nicht leer ist
+                out << "codec=" << codec << "\n";
+                qDebug() << "[DEBUG] Codec saved as:" << codec;
+            }
+        }
+
+        // Speichere den vollständigen Pfad der Post-Process-Datei, falls vorhanden
+        QString postProcessFile = postProcessFileSelector->currentText();
+        if (!postProcessFile.isEmpty()) {
+            QString postProcessFilePath = "/home/admin/rpicam-apps/assets/" + postProcessFile;
+            out << "post-process-file=" << postProcessFilePath << "\n";
+        }
+
+        // Speichere das Output-File, falls vorhanden
+        QString outputFile = outputFileName->text();
+        if (!outputFile.isEmpty()) {
+            QString outputFilePath;
+            if (QDir::isAbsolutePath(outputFile)) {
+                // Wenn der Pfad bereits absolut ist, verwende ihn direkt
+                outputFilePath = QDir::cleanPath(outputFile);
+            } else {
+                // Wenn der Pfad relativ ist, füge das Basisverzeichnis hinzu
+                outputFilePath = QDir::cleanPath("/home/admin/rpicam-output/" + outputFile);
+            }
+            out << "output=" << outputFilePath << "\n";
+        }
+
+        // Speichere den Timelapse-Wert, falls gesetzt
+        QString timelapseValue = timelapseInput->text();
+        if (!timelapseValue.isEmpty()) {
+            out << "timelapse=" << timelapseValue << "\n";
+            qDebug() << "[DEBUG] Timelapse saved as:" << timelapseValue;
+        }
 
         file.close();
         outputLog->append("Configuration saved to " + filePath);
+    } else {
+        outputLog->append("Failed to save configuration to " + filePath);
     }
+}
 void MainWindow::loadConfigurationFromFile(const QString &filePath) {
     QFile file(filePath);
-    if (!file.exists()) {
-        outputLog->append("Configuration file does not exist: " + filePath);
-        return;
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QTextStream in(&file);
+
+        QString width, height; // Temporäre Variablen für Breite und Höhe
+
+        while (!in.atEnd()) {
+            QString line = in.readLine().trimmed();
+            if (line.startsWith("#") || line.isEmpty()) {
+                continue; // Kommentare und leere Zeilen überspringen
+            }
+
+            QStringList parts = line.split("=", Qt::KeepEmptyParts);
+            if (parts.size() != 2) {
+                continue; // Ungültige Zeilen überspringen
+            }
+
+            QString key = parts[0].trimmed();
+            QString value = parts[1].trimmed();
+
+            if (key == "camera") {
+                cameraSelector->setCurrentText(value);
+            } else if (key == "qt-preview") {
+                previewSelector->setCurrentIndex(previewSelector->findData("--qt-preview"));
+            } else if (key == "fullscreen") {
+                previewSelector->setCurrentIndex(previewSelector->findData("--fullscreen"));
+            } else if (key == "nopreview") {
+                previewSelector->setCurrentIndex(previewSelector->findData("--nopreview"));
+            } else if (key == "timeout") {
+                timeoutSelector->setCurrentText(value);
+            } else if (key == "preview") {
+                BoxInput->setText(value);
+            } else if (key == "width") {
+                width = value; // Speichere die Breite
+            } else if (key == "height") {
+                height = value; // Speichere die Höhe
+            } else if (key == "framerate") {
+                framerateSelector->setCurrentText(value);
+            } else if (key == "awb") {
+                awbSelector->setCurrentText(value);
+            } else if (key == "sharpness") {
+                sharpnessInput->setText(value);
+                sharpnessSlider->setValue(static_cast<int>(value.toDouble() * 10));
+            } else if (key == "ev") {
+                evInput->setText(value);
+                evSlider->setValue(static_cast<int>(value.toDouble() * 10));
+            } else if (key == "gain") {
+                gainInput->setText(value);
+                gainSlider->setValue(static_cast<int>(value.toDouble() * 10));
+            } else if (key == "brightness") {
+                brightnessInput->setText(value);
+                brightnessSlider->setValue(static_cast<int>(value.toDouble() * 10));
+            } else if (key == "contrast") {
+                contrastInput->setText(value);
+                contrastSlider->setValue(static_cast<int>(value.toDouble() * 10));
+            } else if (key == "saturation") {
+                saturationInput->setText(value);
+                saturationSlider->setValue(static_cast<int>(value.toDouble() * 10));
+            } else if (key == "post-process-file") {
+                postProcessFileSelector->setCurrentText(value);
+            } else if (key == "output") {
+                outputFileName->setText(value);
+            } else if (key == "timelapse") {
+                timelapseInput->setText(value);
+            }
+        }
+
+        // Setze die Auflösung, falls Breite und Höhe vorhanden sind
+        if (!width.isEmpty() && !height.isEmpty()) {
+            QString resolution = width + "x" + height;
+            if (resolutionSelector->findText(resolution) == -1) {
+                resolutionSelector->addItem(resolution); // Füge die Auflösung hinzu, falls sie nicht existiert
+            }
+            resolutionSelector->setCurrentText(resolution); // Setze die aktuelle Auflösung
+        }
+
+        file.close();
+        outputLog->append("Configuration loaded from " + filePath);
+
+        // Aktualisiere die GUI
+        cameraSelector->update();
+        previewSelector->update();
+        resolutionSelector->update();
+        framerateSelector->update();
+        postProcessFileSelector->update();
+    } else {
+        outputLog->append("Failed to load configuration from " + filePath);
     }
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        outputLog->append("Failed to open configuration file: " + filePath);
-        return;
-    }
-    QTextStream in(&file);
-    QString width, height; // Temporäre Variablen für Breite und Höhe
-    QString resolution;
-    while (!in.atEnd()) {
-        QString line = in.readLine().trimmed();
-        if (line.startsWith("#") || line.isEmpty()) {
-            continue; // Kommentare und leere Zeilen überspringen
-        }
-        QStringList parts = line.split("=", Qt::KeepEmptyParts);
-        if (parts.size() != 2) {
-            continue; // Ungültige Zeilen überspringen
-        }
-        QString key = parts[0].trimmed();
-        QString value = parts[1].trimmed();
-        if (key == "camera") {
-            cameraSelector->setCurrentText(value);
-        } else if (key == "qt-preview") {
-            previewSelector->setCurrentText(value); // Setze das Argument direkt
-        } else if (key == "timeout") {
-            timeoutSelector->setCurrentText(value);
-        } else if (key == "preview") {
-            BoxInput->setText(value);
-        } else if (key == "width") {
-            width = value; // Speichere die Breite
-        } else if (key == "height") {
-            height = value; // Speichere die Höhe
-        } else if (key == "framerate") {
-            framerateSelector->setCurrentText(value);
-        } else if (key == "awb") {
-            awbSelector->setCurrentText(value);
-        } else if (key == "sharpness") {
-            sharpnessInput->setText(value);
-            sharpnessSlider->setValue(static_cast<int>(value.toDouble() * 10));
-        } else if (key == "ev") {
-            evInput->setText(value);
-            evSlider->setValue(static_cast<int>(value.toDouble() * 10));
-        } else if (key == "gain") {
-            gainInput->setText(value);
-            gainSlider->setValue(static_cast<int>(value.toDouble() * 10));
-        } else if (key == "brightness") {
-            brightnessInput->setText(value);
-            brightnessSlider->setValue(static_cast<int>(value.toDouble() * 10));
-        } else if (key == "contrast") {
-            contrastInput->setText(value);
-            contrastSlider->setValue(static_cast<int>(value.toDouble() * 10));
-        } else if (key == "saturation") {
-            saturationInput->setText(value);
-            saturationSlider->setValue(static_cast<int>(value.toDouble() * 10));
-        } else if (key == "post-process-file") {
-            postProcessFileSelector->setCurrentText(value);
-        }
-        if (key == "width" || key == "height") {
-            resolution = QString("%1x%2").arg(width).arg(height);
-        }
-    }
-    if (!resolution.isEmpty()) {
-        if (resolutionSelector->findText(resolution) == -1) {
-            resolutionSelector->addItem(resolution);
-        }
-        resolutionSelector->setCurrentText(resolution);
-    }
-    file.close();
-    outputLog->append("Configuration successfully loaded from " + filePath);
-    cameraSelector->update();
-    previewSelector->update();
-    resolutionSelector->update();
-    framerateSelector->update();
-    postProcessFileSelector->update();
 }
+
 void MainWindow::createMenus() {
     QMenu *setupMenu = menuBar()->addMenu(tr("&Setup"));
     QAction *setupAction = setupMenu->addAction(tr("Configure Settings"));
