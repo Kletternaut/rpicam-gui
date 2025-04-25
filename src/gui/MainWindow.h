@@ -99,7 +99,7 @@ private:
     void updateCodecVisibility(const QString &selectedApp);
     void saveConfigurationToFile(const QString &filePath);
     void loadConfigurationFromFile(const QString &filePath);
-    void setupLayout();
+    void setupLayout(); // Deklaration der Methode hinzufügen
     void updateResetButtonColor(QPushButton *button, double currentValue, double defaultValue);
     QString calculateBoxInput(int additionalOffsetY = 0);
     QString guiOutputFilePath;
@@ -117,5 +117,6 @@ private:
 
     QVBoxLayout *mainLayout;
     QCheckBox *doubleSizeCheckbox; // Checkbox für die Verdopplung der Größe
+    QString rpicamConfigPath; // Speichert den rpicam config file path
 };
 #endif // MAINWINDOW_H

@@ -214,13 +214,13 @@ connect(doubleSizeCheckbox, &QCheckBox::stateChanged, this, [this](int state) {
     QPushButton *saveConfigButton = new QPushButton("Save Config", this);
     QPushButton *loadConfigButton = new QPushButton("Load Config", this);
     connect(saveConfigButton, &QPushButton::clicked, this, [this]() {
-        QString filePath = QFileDialog::getSaveFileName(this, "Save Configuration", "", "Config Files (*.txt);;All Files (*.*)");
+        QString filePath = QFileDialog::getSaveFileName(this, "Save Configuration", rpicamConfigPath, "Config Files (*.txt);;All Files (*.*)");
         if (!filePath.isEmpty()) {
             saveConfigurationToFile(filePath);
         }
     });
     connect(loadConfigButton, &QPushButton::clicked, this, [this]() {
-        QString filePath = QFileDialog::getOpenFileName(this, "Load Configuration", "", "Config Files (*.txt);;All Files (*.*)");
+        QString filePath = QFileDialog::getOpenFileName(this, "Load Configuration", rpicamConfigPath, "Config Files (*.txt);;All Files (*.*)");
         if (!filePath.isEmpty()) {
             loadConfigurationFromFile(filePath);
         }
@@ -810,6 +810,10 @@ void MainWindow::saveConfigurationToFile(const QString &filePath) {
             out << "framerate=" << framerateSelector->currentText() << "\n";
         }
 
+        if (!timeoutSelector->currentText().isEmpty()) {
+            out << "timeout=" << timeoutSelector->currentText() << "\n";
+        }
+
         if (awbSelector->currentText() != "auto") {
             out << "awb=" << awbSelector->currentText() << "\n";
         }
@@ -1112,8 +1116,12 @@ void MainWindow::openGuiSetupDialog() {
 void MainWindow::loadGuiConfiguration() {
     QString defaultConfigFilePath = "/home/admin/rpicam-gui/rpicam-gui.conf";
     QSettings settings(defaultConfigFilePath, QSettings::IniFormat);
+
     guiOutputFilePath = QDir::cleanPath(settings.value("Paths/GuiOutputPath", "/home/admin/rpicam-gui/output").toString());
     guiPostProcessFilePath = QDir::cleanPath(settings.value("Paths/GuiPostProcessPath", "/home/admin/rpicam-apps/assets").toString());
+    rpicamConfigPath = QDir::cleanPath(settings.value("Paths/GuiRpicamConfigPath", "/home/admin/rpicam-gui/config").toString()); // Lade den rpicam config file path
+
+    qDebug() << "Loaded rpicamConfigPath:" << rpicamConfigPath;
 }
 void MainWindow::parseConfigurationFile(const QString &filePath) {
     QFile file(filePath);

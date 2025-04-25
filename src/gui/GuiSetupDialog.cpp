@@ -23,7 +23,7 @@ GuiSetupDialog::GuiSetupDialog(QWidget *parent)
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
     // Config File Path Group
-    QGroupBox *configGroup = new QGroupBox("rpicam-gui Configuration File Path", this);
+    QGroupBox *configGroup = new QGroupBox("rpicam-gui config file path", this);
     QVBoxLayout *configLayout = new QVBoxLayout(configGroup);
     configFilePathEdit = new QLineEdit(this); // Initialisiere das Eingabefeld
     QPushButton *browseConfigFileButton = new QPushButton("Browse", this);
@@ -32,8 +32,8 @@ GuiSetupDialog::GuiSetupDialog(QWidget *parent)
     connect(browseConfigFileButton, &QPushButton::clicked, this, &GuiSetupDialog::browseConfigFilePath);
     mainLayout->addWidget(configGroup);
 
-    // Output Path Group
-    QGroupBox *outputGroup = new QGroupBox("Output Path", this);
+    // Output Files Path Group
+    QGroupBox *outputGroup = new QGroupBox("Output file path", this);
     QVBoxLayout *outputLayout = new QVBoxLayout(outputGroup);
     outputPathEdit = new QLineEdit(this); // Initialisiere das Eingabefeld
     QPushButton *browseOutputButton = new QPushButton("Browse", this);
@@ -52,8 +52,8 @@ GuiSetupDialog::GuiSetupDialog(QWidget *parent)
     });
     mainLayout->addWidget(outputGroup);
 
-    // Post-Process Path Group
-    QGroupBox *postProcessGroup = new QGroupBox("Post-Process Path", this);
+    // Post-Process Files Path Group
+    QGroupBox *postProcessGroup = new QGroupBox("Post-process file path", this);
     QVBoxLayout *postProcessLayout = new QVBoxLayout(postProcessGroup);
     postProcessPathEdit = new QLineEdit(this); // Initialisiere das Eingabefeld
     QPushButton *browsePostProcessButton = new QPushButton("Browse", this);
@@ -71,6 +71,26 @@ GuiSetupDialog::GuiSetupDialog(QWidget *parent)
         }
     });
     mainLayout->addWidget(postProcessGroup);
+
+    // LoadSave rpicamConfig files path Group
+    QGroupBox *rpicamConfigGroup = new QGroupBox("rpicam config file path", this);
+    QVBoxLayout *rpicamLayout = new QVBoxLayout(rpicamConfigGroup); // Richtiges Layout verwenden
+    rpicamConfigPathEdit = new QLineEdit(this); // Initialisiere das Eingabefeld
+    QPushButton *browserpicamConfigButton = new QPushButton("Browse", this);
+    rpicamLayout->addWidget(rpicamConfigPathEdit); // Füge das Eingabefeld zum richtigen Layout hinzu
+    rpicamLayout->addWidget(browserpicamConfigButton); // Füge den Button zum richtigen Layout hinzu
+    connect(browserpicamConfigButton, &QPushButton::clicked, this, [this]() {
+        QString initialPath = rpicamConfigPathEdit->text();
+        if (initialPath.isEmpty()) {
+            initialPath = "/home/admin/rpicam-gui/config"; // Standardpfad, falls leer
+        }
+
+        QString dir = QFileDialog::getExistingDirectory(this, "Select rpicamConfig Directory", initialPath);
+        if (!dir.isEmpty()) {
+            rpicamConfigPathEdit->setText(dir);
+        }
+    });
+    mainLayout->addWidget(rpicamConfigGroup); // Füge die Gruppe zum Hauptlayout hinzu
 
     // Splash Screen Checkbox
     splashScreenCheckbox->setToolTip("Activate or deactivate the splashscreen on startup.");
@@ -95,7 +115,9 @@ GuiSetupDialog::GuiSetupDialog(QWidget *parent)
     configFilePathEdit->setText(settings.value("Paths/ConfigFilePath", defaultConfigFilePath).toString());
     outputPathEdit->setText(settings.value("Paths/GuiOutputPath", "/home/admin/rpicam-gui/output").toString());
     postProcessPathEdit->setText(settings.value("Paths/GuiPostProcessPath", "/home/admin/rpicam-apps/assets").toString());
+    rpicamConfigPathEdit->setText(settings.value("Paths/GuiRpicamConfigPath", "/home/admin/rpicam-gui/config").toString());
     splashScreenCheckbox->setChecked(settings.value("splashScreenEnabled", true).toBool());
+    
 }
 
 GuiSetupDialog::~GuiSetupDialog() {
@@ -128,6 +150,7 @@ void GuiSetupDialog::saveGuiSettings() {
 
     settings.setValue("Paths/GuiOutputPath", outputPathEdit->text());
     settings.setValue("Paths/GuiPostProcessPath", postProcessPathEdit->text());
+    settings.setValue("Paths/GuiRpicamConfigPath", rpicamConfigPathEdit->text());
     settings.setValue("Paths/ConfigFilePath", configFilePath);
     settings.setValue("splashScreenEnabled", splashScreenCheckbox->isChecked());
 
@@ -137,4 +160,16 @@ void GuiSetupDialog::saveGuiSettings() {
 
 bool GuiSetupDialog::isSplashScreenEnabled() const {
     return splashScreenCheckbox->isChecked();
+}
+
+void GuiSetupDialog::browserpicamConfigFilePath() {
+    QString initialPath = rpicamConfigPathEdit->text();
+    if (initialPath.isEmpty()) {
+        initialPath = "/home/admin/rpicam-gui/config"; // Standardpfad, falls leer
+    }
+
+    QString dir = QFileDialog::getExistingDirectory(this, "Select rpicamConfig Directory", initialPath);
+    if (!dir.isEmpty()) {
+        rpicamConfigPathEdit->setText(dir);
+    }
 }

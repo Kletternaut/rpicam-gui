@@ -18,10 +18,12 @@ public:
 private slots:
     void saveGuiSettings();
     void browseConfigFilePath(); // Neue Methode für den "Browse"-Button
+    void browserpicamConfigFilePath(); // Neue Methode für den "Browse"-Button
 
 private:
     QLineEdit *outputPathEdit;
     QLineEdit *postProcessPathEdit;
+    QLineEdit *rpicamConfigPathEdit;
     QLineEdit *configFilePathEdit; // Neues Eingabefeld für den Speicherort der Konfigurationsdatei
     QCheckBox *splashScreenCheckbox; // Checkbox für den Splash Screen
 };
