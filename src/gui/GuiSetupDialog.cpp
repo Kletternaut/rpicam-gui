@@ -1,3 +1,4 @@
+//#include "MainWindow.h"
 #include "GuiSetupDialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -92,6 +93,9 @@ GuiSetupDialog::GuiSetupDialog(QWidget *parent)
     });
     mainLayout->addWidget(rpicamConfigGroup); // Füge die Gruppe zum Hauptlayout hinzu
 
+    // Custom Applications Group
+    setupCustomAppInputs(mainLayout); // Füge die Eingabefelder für CustomApps hinzu
+
     // Splash Screen Checkbox
     splashScreenCheckbox->setToolTip("Activate or deactivate the splashscreen on startup.");
     mainLayout->addWidget(splashScreenCheckbox);
@@ -110,14 +114,7 @@ GuiSetupDialog::GuiSetupDialog(QWidget *parent)
     setLayout(mainLayout);
 
     // Lade bestehende Einstellungen
-    QString defaultConfigFilePath = "/home/admin/rpicam-gui/rpicam-gui.conf";
-    QSettings settings(defaultConfigFilePath, QSettings::IniFormat);
-    configFilePathEdit->setText(settings.value("Paths/ConfigFilePath", defaultConfigFilePath).toString());
-    outputPathEdit->setText(settings.value("Paths/GuiOutputPath", "/home/admin/rpicam-gui/output").toString());
-    postProcessPathEdit->setText(settings.value("Paths/GuiPostProcessPath", "/home/admin/rpicam-apps/assets").toString());
-    rpicamConfigPathEdit->setText(settings.value("Paths/GuiRpicamConfigPath", "/home/admin/rpicam-gui/config").toString());
-    splashScreenCheckbox->setChecked(settings.value("splashScreenEnabled", true).toBool());
-    
+    loadGuiSettings();
 }
 
 GuiSetupDialog::~GuiSetupDialog() {
@@ -139,13 +136,9 @@ void GuiSetupDialog::browseConfigFilePath() {
 }
 
 void GuiSetupDialog::saveGuiSettings() {
-    // Standardpfad für die Konfigurationsdatei definieren
     QString defaultConfigFilePath = "/home/admin/rpicam-gui/rpicam-gui.conf";
-
-    // Konfigurationsdateipfad aus dem Eingabefeld oder Standardwert verwenden
     QString configFilePath = configFilePathEdit->text().isEmpty() ? defaultConfigFilePath : configFilePathEdit->text();
 
-    // QSettings verwenden, um die Konfiguration zu speichern
     QSettings settings(configFilePath, QSettings::IniFormat);
 
     settings.setValue("Paths/GuiOutputPath", outputPathEdit->text());
@@ -153,6 +146,11 @@ void GuiSetupDialog::saveGuiSettings() {
     settings.setValue("Paths/GuiRpicamConfigPath", rpicamConfigPathEdit->text());
     settings.setValue("Paths/ConfigFilePath", configFilePath);
     settings.setValue("splashScreenEnabled", splashScreenCheckbox->isChecked());
+
+    for (int i = 0; i < customAppInputs.size(); ++i) {
+        QString key = QString("CustomApp%1").arg(i + 1);
+        settings.setValue(key, customAppInputs[i]->text());
+    }
 
     qDebug() << "Configuration saved to:" << configFilePath;
     accept();
@@ -172,4 +170,66 @@ void GuiSetupDialog::browserpicamConfigFilePath() {
     if (!dir.isEmpty()) {
         rpicamConfigPathEdit->setText(dir);
     }
+}
+
+void GuiSetupDialog::setupCustomAppInputs(QVBoxLayout *layout) {
+    QGroupBox *customAppsGroup = new QGroupBox("Custom Applications", this);
+    QVBoxLayout *customAppsLayout = new QVBoxLayout(customAppsGroup);
+
+    for (int i = 0; i < 3; ++i) { // Maximal 5 benutzerdefinierte Apps
+        QLineEdit *input = new QLineEdit(this);
+        input->setPlaceholderText(QString("Custom App %1").arg(i + 1)); // Platzhaltertext hinzufügen
+        customAppsLayout->addWidget(input);
+        customAppInputs.append(input); // Eingabefeld speichern
+    }
+
+    layout->addWidget(customAppsGroup);
+}
+
+void GuiSetupDialog::loadGuiSettings() {
+    QString defaultConfigFilePath = "/home/admin/rpicam-gui/rpicam-gui.conf";
+
+    // Erzwinge das Neuladen der Einstellungen
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+    QSettings settings(defaultConfigFilePath, QSettings::IniFormat);
+
+    configFilePathEdit->setText(settings.value("Paths/ConfigFilePath", defaultConfigFilePath).toString());
+    outputPathEdit->setText(settings.value("Paths/GuiOutputPath", "/home/admin/rpicam-gui/output").toString());
+    postProcessPathEdit->setText(settings.value("Paths/GuiPostProcessPath", "/home/admin/rpicam-apps/assets").toString());
+    rpicamConfigPathEdit->setText(settings.value("Paths/GuiRpicamConfigPath", "/home/admin/rpicam-gui/config").toString());
+    splashScreenCheckbox->setChecked(settings.value("splashScreenEnabled", true).toBool());
+
+    // Leere die Listen
+    customAppEntries.clear();
+    for (QLineEdit *input : customAppInputs) {
+        input->clear();
+    }
+
+    // Lade die CustomApps in customAppEntries
+    for (int i = 0; i < 3; ++i) {
+        QString key = QString("CustomApp%1").arg(i + 1);
+        QString value = settings.value(key, "").toString();
+        if (!value.isEmpty()) { // Nur nicht-leere Werte hinzufügen
+            customAppEntries.append(value);
+        }
+    }
+
+    // Synchronisiere die Werte mit den QLineEdit-Feldern
+    for (int i = 0; i < customAppInputs.size(); ++i) {
+        if (i < customAppEntries.size()) {
+            customAppInputs[i]->setText(customAppEntries[i]);
+        } else {
+            customAppInputs[i]->clear();
+        }
+    }
+}
+
+QStringList GuiSetupDialog::getCustomAppEntries() const {
+    QStringList entries;
+    for (QLineEdit *input : customAppInputs) {
+        if (!input->text().isEmpty()) {
+            entries.append(input->text());
+        }
+    }
+    return entries;
 }

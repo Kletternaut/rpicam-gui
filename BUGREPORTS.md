@@ -19,18 +19,18 @@ mit vorangestellter **BUGNUMBER**
 **BUGREPORTLIST**
 No.  state  date    -    description - 
 
-**0001**  [o] 2025.04.25  qt-preview wird wieder als preview=--qt-preview in die config geschrieben
+**0001**  [c] 2025.04.25  qt-preview wird wieder als preview=--qt-preview in die config geschrieben
 
-**0002**  [o] 2025.04.25  beim laden aus der config wird qt-preview= nicht übernommen
+**0002**  [c] 2025.04.25  beim laden aus der config wird qt-preview= nicht übernommen
 
-**0003**  [o] 2025.04.25  preview=0,100,200,200 ->Vorschaufenstermaße werden nicht in config gespeichert
+**0003**  [c] 2025.04.25  preview=0,100,200,200 ->Vorschaufenstermaße werden nicht in config gespeichert
 
-**0004**  [o] 2025.04.25  dateinamen -o werden nicht aus der config geladen und ins output file: lineedit feld übertragen
+**0004**  [c] 2025.04.25  dateinamen -o werden nicht aus der config geladen und ins output file: lineedit feld übertragen
 
-**0005**  [o] 2025.04.25  beim jeweiligen browse button von post-process-file, load-config und save config stimmen die speicherpfade interhalb Dialoge nicht mit dem setup überein
+**0005**  [c] 2025.04.25  beim jeweiligen browse button von post-process-file, load-config und save config stimmen die speicherpfade interhalb Dialoge nicht mit dem setup überein
 
-**0006**  [c] 2025.04.25  
-**0007**  [c] 2025.04.25  
+**0006**  [o] 2025.04.26  Tooltipps fehlen, externer include möglich?
+**0007**  [c] 2025.04.25  Anpassbare eigene rpicam-apps über setup ins dropdown einfügen.
 **0008**  [c] 2025.04.25  
 **0009**  [c] 2025.04.25  
 **0010**  [c] 2025.04.25  

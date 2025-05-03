@@ -27,50 +27,52 @@
 #include "GuiSetupDialog.h" // Externe Datei für den Setup-Dialog
 #include "../Version.h"
 #include <QGroupBox>
-const double DEFAULT_SHARPNESS = 1.0;
-const double DEFAULT_EV = 0.0;
-const double DEFAULT_GAIN = 0.0;
-const double DEFAULT_BRIGHTNESS = 0.0;
-const double DEFAULT_CONTRAST = 1.0;
-const double DEFAULT_SATURATION = 1.0;
+#include "Defaults.h"
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent) {
     DebugLogger::initialize("debug.log");
+    postProcessFileSelector = new QComboBox(this);
+    resetPostProcessFileButton = new QPushButton("✕", this);
+    resetPostProcessFileButton->setFixedWidth(24); // gleiche Größe wie bei den Slidern
+    resetPostProcessFileButton->setToolTip("Reset Auswahl");
+    qDebug() << "postProcessFileSelector:" << postProcessFileSelector;
     loadGuiConfiguration();
-      appSelector = new QComboBox(this);
-      cameraSelector = new QComboBox(this);
-      resolutionSelector = new QComboBox(this);
-      framerateSelector = new QComboBox(this);
-      previewSelector = new QComboBox(this);
-      cameraInfo = new QTextEdit(this);
-      parameterLayout = new QFormLayout;
-      parameterWidget = new QWidget(this);
-      outputLog = new QTextEdit(this);
-      startStopButton = new QPushButton("Start", this);
-      outputFileName = new QLineEdit(this);
-      browseButton = new QPushButton("Browse", this);
-      timeoutSelector = new QComboBox(this);
-      timelapseInput = new QLineEdit(this);
-      segmentationCheckbox = new QCheckBox("Enable Segmentation (_%04d)", this);
-      postProcessFileSelector = new QComboBox(this);
-      postProcessFileBrowseButton = new QPushButton("Browse", this);
-      customPreviewInput = new QLineEdit(this);
-      BoxInput = new CustomLineEdit(this);
-      timestampCheckbox = new QCheckBox("TS", this);
-      selectionOverlay = new SelectionOverlay(nullptr); // Kein Eltern-Widget
-      awbSelector = new QComboBox(this);
-      sharpnessSlider = new QSlider(Qt::Horizontal, this);
-      sharpnessInput = new QLineEdit(this);
-      evSlider = new QSlider(Qt::Horizontal, this);
-      evInput = new QLineEdit(this);
-      gainSlider = new QSlider(Qt::Horizontal, this);
-      gainInput = new QLineEdit(this);
-      brightnessSlider = new QSlider(Qt::Horizontal, this);
-      brightnessInput = new QLineEdit(this);
-      contrastSlider = new QSlider(Qt::Horizontal, this);
-      contrastInput = new QLineEdit(this);
-      saturationSlider = new QSlider(Qt::Horizontal, this);
-      saturationInput = new QLineEdit(this);
+    appSelector = new QComboBox(this);
+    cameraSelector = new QComboBox(this);
+    resolutionSelector = new QComboBox(this);
+    framerateSelector = new QComboBox(this);
+    previewSelector = new QComboBox(this);
+    cameraInfo = new QTextEdit(this);
+    parameterLayout = new QFormLayout;
+    parameterWidget = new QWidget(this);
+    outputLog = new QTextEdit(this);
+    startStopButton = new QPushButton("Start", this);
+    outputFileName = new QLineEdit(this);
+    browseButton = new QPushButton("Browse", this);
+    timeoutSelector = new QComboBox(this);
+    timelapseInput = new QLineEdit(this);
+    segmentationCheckbox = new QCheckBox("Enable Segmentation (_%04d)", this);
+    postProcessFileBrowseButton = new QPushButton("Browse", this);
+    customPreviewInput = new QLineEdit(this);
+    BoxInput = new CustomLineEdit(this);
+    timestampCheckbox = new QCheckBox("TS", this);
+    selectionOverlay = new SelectionOverlay(nullptr); // Kein Eltern-Widget
+    awbSelector = new QComboBox(this);
+    sharpnessSlider = new QSlider(Qt::Horizontal, this);
+    sharpnessInput = new QLineEdit(this);
+    evSlider = new QSlider(Qt::Horizontal, this);
+    evInput = new QLineEdit(this);
+    gainSlider = new QSlider(Qt::Horizontal, this);
+    gainInput = new QLineEdit(this);
+    brightnessSlider = new QSlider(Qt::Horizontal, this);
+    brightnessInput = new QLineEdit(this);
+    contrastSlider = new QSlider(Qt::Horizontal, this);
+    contrastInput = new QLineEdit(this);
+    saturationSlider = new QSlider(Qt::Horizontal, this);
+    saturationInput = new QLineEdit(this);
+    hflipCheckbox = new QCheckBox("", this);
+    vflipCheckbox = new QCheckBox("", this);
+    rotationCheckbox = new QCheckBox("", this);
     initializeSelectionOverlay();
     initializeBoxInput();
     appSelector->setToolTip("Select the application to run (e.g., rpicam-still or rpicam-vid).");
@@ -87,7 +89,18 @@ MainWindow::MainWindow(QWidget *parent)
     timeoutSelector->setEditable(true);
     timeoutSelector->addItems({"0", "5000", "10000", "15000", "20000"});
     timeoutSelector->setCurrentText("0");
-    appSelector->addItems({"rpicam-vid", "rpicam-jpeg", "rpicam-still", "rpicam-raw", "rpicam-hello", "rpicam-focus", "rpicam-focus008"});
+    appSelector->addItems({"rpicam-vid", "rpicam-jpeg", "rpicam-still", "rpicam-raw", "rpicam-hello"});
+    // Lade benutzerdefinierte Apps aus der Konfiguration
+    customAppEntries.clear();
+    QSettings settings("/home/admin/rpicam-gui/rpicam-gui.conf", QSettings::IniFormat); // QSettings-Instanz erstellen
+    for (int i = 0; i < 5; ++i) {
+        QString key = QString("CustomApp%1").arg(i + 1);
+        QString value = settings.value(key, "").toString();
+        if (!value.isEmpty()) {
+            customAppEntries.append(value); // Füge den Namen zur Liste hinzu
+    }
+}
+    updateAppSelector();
     timelapseInput->setPlaceholderText("Interval (ms)");
     timelapseInput->setVisible(true); // Standardmäßig ausgeblendet
     previewSelector->clear();
@@ -97,33 +110,8 @@ MainWindow::MainWindow(QWidget *parent)
     previewSelector->addItem("No Preview", "--nopreview");
     previewSelector->setCurrentIndex(previewSelector->findData("--qt-preview")); // Standardwert setzen
     postProcessFileSelector->setEditable(true); // Benutzerdefinierte Eingaben erlauben
-    postProcessFileSelector->addItems({
-        "annotate_cv.json",
-        "drc.json",
-        "face_detect_cv.json",
-        "hailo_classifier.json",
-        "hailo_pose_inf_fl.json",
-        "hailo_scrfd.json",
-        "hailo_yolov5_personface.json",
-        "hailo_yolov5_segmentation.json",
-        "hailo_yolov6_inference.json",
-        "hailo_yolov8_inference.json",
-        "hailo_yolov8_pose.json",
-        "hailo_yolox_inference.json",
-        "hdr.json",
-        "imx500_mobilenet_ssd.json",
-        "imx500_posenet.json",
-        "motion_detect.json",
-        "negate.json",
-        "object_classify_tf.json",
-        "object_detect_tf.json",
-        "pose_estimation_tf.json",
-        "segmentation_tf.json",
-        "sobel_cv.json",
-        "yolov5_personface.json",
-        "yolov5seg.json"
-    });
     postProcessFileSelector->setCurrentText(""); // Standardwert leer setzen
+
     auto *mainLayout = new QVBoxLayout;
     auto *inputLayout = new QHBoxLayout;
     inputLayout->addWidget(new QLabel("App:"));
@@ -139,7 +127,7 @@ MainWindow::MainWindow(QWidget *parent)
     BoxInput->setPlaceholderText("Double-click to toggle overlay");
     BoxInput->setToolTip("Double-click to toggle the overlay visibility.");
     BoxInput->setFixedWidth(150); // Setze die Breite des Overlay-Input-Felds auf 150 Pixel
-// Erstelle eine QGroupBox für Overlay-Optionen
+    // Erstelle eine QGroupBox für Overlay-Optionen
     QGroupBox *overlayGroup = new QGroupBox("", this);
     overlayGroup->setFixedWidth(330); // Breite der QGroupBox auf 330 Pixel setzen
     QVBoxLayout *overlayLayout = new QVBoxLayout;
@@ -150,7 +138,7 @@ MainWindow::MainWindow(QWidget *parent)
     boxLayout->addWidget(BoxInput);
     doubleSizeCheckbox = new QCheckBox("x2", this);
     boxLayout->addWidget(doubleSizeCheckbox);
-    auto *resetButton = new QPushButton("x", this);
+    auto *resetButton = new QPushButton("✕", this);
     resetButton->setFixedWidth(20);
     boxLayout->addWidget(resetButton);
     overlayLayout->addLayout(boxLayout);
@@ -162,7 +150,7 @@ MainWindow::MainWindow(QWidget *parent)
         QString defaultBoxValue = calculateBoxInput(+30);
         BoxInput->setText(defaultBoxValue);
     });
-connect(doubleSizeCheckbox, &QCheckBox::stateChanged, this, [this](int state) {
+    connect(doubleSizeCheckbox, &QCheckBox::stateChanged, this, [this](int state) {
         Q_UNUSED(state); // Der Zustand wird hier nicht direkt verwendet
         QString updatedBoxValue = calculateBoxInput(+30); // Neuberechnung durchführen
         BoxInput->setText(updatedBoxValue); // Aktualisiere das BoxInput-Feld
@@ -189,6 +177,7 @@ connect(doubleSizeCheckbox, &QCheckBox::stateChanged, this, [this](int state) {
     postProcessLayout->addWidget(new QLabel("Post-Process File:"));
     postProcessLayout->addWidget(postProcessFileSelector);
     postProcessLayout->addWidget(postProcessFileBrowseButton);
+    postProcessLayout->addWidget(resetPostProcessFileButton); // Füge den Reset-Button hinzu
     mainLayout->addLayout(inputLayout);
     mainLayout->addLayout(outputLayout);
     mainLayout->addLayout(timeoutLayout);
@@ -205,17 +194,42 @@ connect(doubleSizeCheckbox, &QCheckBox::stateChanged, this, [this](int state) {
     codecSelector->addItems({"h264", "mjpeg", "yuv420", "libav"});
     codecSelector->setCurrentText("h264"); // Standardwert aktiv setzen
     codecSelector->setToolTip("Select the codec to use. Leave empty for default (null).");
+    //codecSelector->setFixedWidth(150); // Setzt die Breite des Dropdowns auf 150 Pixel
+
+    resetCodecButton = new QPushButton("✕", this);
+    resetCodecButton->setFixedWidth(20);
+    resetCodecButton->setToolTip("Reset Codec selection");
+    
     auto *codecLayout = new QHBoxLayout;
     codecLayout->addWidget(codecLabel);
     codecLayout->addWidget(codecSelector);
+    codecLayout->addWidget(resetCodecButton); // Reset-Button hinzufügen
     mainLayout->addLayout(codecLayout);
-    codecLabel->setVisible(true);
-    codecSelector->setVisible(true);
+    
+    // Verbindung für den Reset-Button
+    connect(resetCodecButton, &QPushButton::clicked, this, [this]() {
+        codecSelector->setCurrentIndex(0);
+        codecSelector->setCurrentText("h264");
+        updateResetButtonColor(resetCodecButton, 0, 0);
+    });
+    connect(codecSelector, &QComboBox::currentTextChanged, this, [this](const QString &text) {
+        bool hasSelection = !text.isEmpty();
+        updateResetButtonColor(resetCodecButton, hasSelection ? 1 : 0, 0);
+    });
+
     QPushButton *saveConfigButton = new QPushButton("Save Config", this);
     QPushButton *loadConfigButton = new QPushButton("Load Config", this);
     connect(saveConfigButton, &QPushButton::clicked, this, [this]() {
-        QString filePath = QFileDialog::getSaveFileName(this, "Save Configuration", rpicamConfigPath, "Config Files (*.txt);;All Files (*.*)");
+        QString filePath = QFileDialog::getSaveFileName(
+            this,
+            "Save Configuration",
+            rpicamConfigPath,
+            "Config Files (*.txt);;All Files (*.*)"
+        );
         if (!filePath.isEmpty()) {
+            if (!filePath.endsWith(".txt", Qt::CaseInsensitive)) {
+                filePath += ".txt";
+            }
             saveConfigurationToFile(filePath);
         }
     });
@@ -243,15 +257,15 @@ connect(doubleSizeCheckbox, &QCheckBox::stateChanged, this, [this](int state) {
     connect(browseButton, &QPushButton::clicked, this, &MainWindow::openSaveFileDialog);
     connect(startStopButton, &QPushButton::clicked, this, &MainWindow::startRpiCamApp);
     connect(postProcessFileBrowseButton, &QPushButton::clicked, this, [this]() {
-    QString initialPath = postProcessFileSelector->currentText();
-    if (initialPath.isEmpty() || !QFileInfo(initialPath).isAbsolute()) {
-        initialPath = QDir(guiPostProcessFilePath).filePath(initialPath);
-    }
-    QString fileName = QFileDialog::getOpenFileName(this, "Select Post-Process File", initialPath, "JSON Files (*.json);;All Files (*.*)");
-    if (!fileName.isEmpty()) {
-        postProcessFileSelector->setCurrentText(fileName); // Setze den ausgewählten Dateinamen
-    }
-});
+        QString initialPath = postProcessFileSelector->currentText();
+        if (initialPath.isEmpty() || !QFileInfo(initialPath).isAbsolute()) {
+            initialPath = QDir(guiPostProcessFilePath).filePath(initialPath);
+        }
+        QString fileName = QFileDialog::getOpenFileName(this, "Select Post-Process File", initialPath, "JSON Files (*.json);;All Files (*.*)");
+        if (!fileName.isEmpty()) {
+            postProcessFileSelector->setCurrentText(fileName); // Setze den ausgewählten Dateinamen
+        }
+    });
     connect(&process, &QProcess::stateChanged, this, &MainWindow::updateButtonVisibility);
     updateButtonVisibility();
     updateParameterFields();
@@ -281,17 +295,35 @@ connect(doubleSizeCheckbox, &QCheckBox::stateChanged, this, [this](int state) {
     awbSelector->addItems({"auto", "incandescent", "tungsten", "fluorescent", "indoor", "daylight", "cloudy", "custom"});
     awbSelector->setCurrentText("auto"); // Standardwert setzen
     awbSelector->setToolTip("Select the AWB (Auto White Balance) mode.");
+    //codecSelector->setFixedWidth(150); // Feste Breite von 150 Pixeln
+
+    resetAwbButton = new QPushButton("✕", this);
+    resetAwbButton->setFixedWidth(20);
+    resetAwbButton->setToolTip("Reset AWB selection");
+    
     auto *awbLayout = new QHBoxLayout;
     awbLayout->addWidget(new QLabel("AWB:", this));
     awbLayout->addWidget(awbSelector);
+    awbLayout->addWidget(resetAwbButton); // Reset-Button hinzufügen
     mainLayout->addLayout(awbLayout);
+    
+    // Verbindung für den Reset-Button
+    connect(resetAwbButton, &QPushButton::clicked, this, [this]() {
+        awbSelector->setCurrentIndex(0);
+        awbSelector->setCurrentText("auto");
+        updateResetButtonColor(resetAwbButton, 0, 0);
+    });
+    connect(awbSelector, &QComboBox::currentTextChanged, this, [this](const QString &text) {
+        bool hasSelection = (text != "auto");
+        updateResetButtonColor(resetAwbButton, hasSelection ? 1 : 0, 0);
+    });    
     sharpnessSlider->setRange(0, 50); // Wertebereich von 0 bis 5 (multipliziert mit 10)
     sharpnessSlider->setSingleStep(1); // Schritte von 0.1 (multipliziert mit 10)
     sharpnessSlider->setValue(0); // Standardwert
     sharpnessInput->setValidator(new QDoubleValidator(0.0, 5.0, 1, this)); // Wertebereich 0.0 bis 5.0, 1 Dezimalstelle
     sharpnessInput->setText("1.0"); // Standardwert
     sharpnessInput->setToolTip("Set the sharpness value (1.0 to 5.0).");
-    auto *sharpnessResetButton = new QPushButton("x", this);
+    auto *sharpnessResetButton = new QPushButton("✕", this);
     sharpnessResetButton->setFixedWidth(20); // Breite auf 20 Pixel festlegen
     connect(sharpnessSlider, &QSlider::valueChanged, this, [this, sharpnessResetButton](int value) {
         double sharpness = value / 10.0;
@@ -318,7 +350,7 @@ connect(doubleSizeCheckbox, &QCheckBox::stateChanged, this, [this](int state) {
     evSlider->setValue(0); // Standardwert
     evInput->setValidator(new QDoubleValidator(-9.9, 9.9, 1, this));
     evInput->setText("0.0");
-    auto *evResetButton = new QPushButton("x", this);
+    auto *evResetButton = new QPushButton("✕", this);
     evResetButton->setFixedWidth(20);
     connect(evResetButton, &QPushButton::clicked, this, [this]() {
     evSlider->setValue(0); // Standardwert (0.0 * 10)
@@ -335,7 +367,7 @@ mainLayout->addLayout(evLayout);
     gainSlider->setValue(0); // Standardwert
     gainInput->setValidator(new QDoubleValidator(-5.0, 5.0, 1, this));
     gainInput->setText("0.0");
-    auto *gainResetButton = new QPushButton("x", this);
+    auto *gainResetButton = new QPushButton("✕", this);
     gainResetButton->setFixedWidth(20);
     connect(gainResetButton, &QPushButton::clicked, this, [this]() {
         gainSlider->setValue(0); // Standardwert (0.0 * 10)
@@ -347,12 +379,12 @@ mainLayout->addLayout(evLayout);
     gainLayout->addWidget(gainInput);
     gainLayout->addWidget(gainResetButton);
     mainLayout->addLayout(gainLayout);
-    brightnessSlider->setRange(-10, 10); // Wertebereich von -1 bis 1 (multipliziert mit 10)
+    brightnessSlider->setRange(-10, 10); // Wertebereich von -1 bis 1 (multiplziert mit 10)
     brightnessSlider->setSingleStep(1);
     brightnessSlider->setValue(0); // Standardwert
     brightnessInput->setValidator(new QDoubleValidator(-1.0, 1.0, 1, this));
     brightnessInput->setText("0.0");
-    auto *brightnessResetButton = new QPushButton("x", this);
+    auto *brightnessResetButton = new QPushButton("✕", this);
     brightnessResetButton->setFixedWidth(20);
     connect(brightnessResetButton, &QPushButton::clicked, this, [this]() {
         brightnessSlider->setValue(0); // Standardwert (0.0 * 10)
@@ -369,7 +401,7 @@ mainLayout->addLayout(evLayout);
     contrastSlider->setValue(10); // Standardwert (1.0 * 10)
     contrastInput->setValidator(new QDoubleValidator(0.0, 5.0, 1, this)); // Wertebereich 0.0 bis 5.0, 1 Dezimalstelle
     contrastInput->setText("1.0");
-    auto *contrastResetButton = new QPushButton("x", this);
+    auto *contrastResetButton = new QPushButton("✕", this);
     contrastResetButton->setFixedWidth(20);
     connect(contrastResetButton, &QPushButton::clicked, this, [this]() {
         contrastSlider->setValue(10); // Standardwert (1.0 * 10)
@@ -386,7 +418,7 @@ mainLayout->addLayout(evLayout);
     saturationSlider->setValue(10); // Standardwert (1.0)
     saturationInput->setValidator(new QDoubleValidator(0.0, 1.0, 1, this));
     saturationInput->setText("1.0");
-    auto *saturationResetButton = new QPushButton("x", this);
+    auto *saturationResetButton = new QPushButton("✕", this);
     saturationResetButton->setFixedWidth(20);
     connect(saturationResetButton, &QPushButton::clicked, this, [this]() {
         saturationSlider->setValue(10); // Standardwert (1.0 * 10)
@@ -525,6 +557,110 @@ mainLayout->addLayout(evLayout);
         outputFileName->clear(); // Leere das Output-Feld
     }
 });
+connect(resetPostProcessFileButton, &QPushButton::clicked, this, [this]() {
+    postProcessFileSelector->setCurrentIndex(-1);
+    postProcessFileSelector->setCurrentText("");
+    updateResetButtonColor(resetPostProcessFileButton, 0, 0); // Farbe zurücksetzen
+});
+connect(postProcessFileSelector, &QComboBox::currentTextChanged, this, [this](const QString &text) {
+    bool hasSelection = !text.isEmpty();
+    updateResetButtonColor(resetPostProcessFileButton, hasSelection ? 1 : 0, 0);
+});
+
+
+auto *hflipResetButton = new QPushButton("✕", this);
+hflipResetButton->setFixedWidth(20);
+hflipResetButton->setToolTip("Reset Horizontal Flip");
+
+auto *vflipResetButton = new QPushButton("✕", this);
+vflipResetButton->setFixedWidth(20);
+vflipResetButton->setToolTip("Reset Vertical Flip");
+
+auto *rotationResetButton = new QPushButton("✕", this);
+rotationResetButton->setFixedWidth(20);
+rotationResetButton->setToolTip("Reset Rotation");
+/**
+mainLayout->addWidget(hflipCheckbox);
+mainLayout->addWidget(vflipCheckbox);
+mainLayout->addWidget(rotationCheckbox);
+ */
+auto *hflipLayout = new QHBoxLayout;
+hflipLayout->addStretch(); // <-- rechtsbündig
+hflipLayout->addWidget(hflipCheckbox);
+hflipLayout->addWidget(hflipResetButton);
+mainLayout->addLayout(hflipLayout);
+
+auto *vflipLayout = new QHBoxLayout;
+vflipLayout->addStretch(); // <-- rechtsbündig
+vflipLayout->addWidget(vflipCheckbox);
+vflipLayout->addWidget(vflipResetButton);
+mainLayout->addLayout(vflipLayout);
+
+auto *rotationLayout = new QHBoxLayout;
+rotationLayout->addStretch(); // <-- rechtsbündig
+rotationLayout->addWidget(rotationCheckbox);
+rotationLayout->addWidget(rotationResetButton);
+mainLayout->addLayout(rotationLayout);
+
+// Labels erstellen
+auto *hflipLabel = new QLabel("Horizontal Flip:", this);
+auto *vflipLabel = new QLabel("Vertical Flip:", this);
+auto *rotationLabel = new QLabel("Rotation 180°:", this);
+
+// Layouts anpassen
+hflipLayout->addStretch();
+hflipLayout->addWidget(hflipLabel);
+hflipLayout->addWidget(hflipCheckbox);
+hflipLayout->addWidget(hflipResetButton);
+mainLayout->addLayout(hflipLayout);
+
+vflipLayout->addStretch();
+vflipLayout->addWidget(vflipLabel);
+vflipLayout->addWidget(vflipCheckbox);
+vflipLayout->addWidget(vflipResetButton);
+mainLayout->addLayout(vflipLayout);
+
+rotationLayout->addStretch();
+rotationLayout->addWidget(rotationLabel);
+rotationLayout->addWidget(rotationCheckbox);
+rotationLayout->addWidget(rotationResetButton);
+mainLayout->addLayout(rotationLayout);
+
+connect(hflipResetButton, &QPushButton::clicked, this, [this]() {
+    hflipCheckbox->setChecked(false);
+});
+connect(vflipResetButton, &QPushButton::clicked, this, [this]() {
+    vflipCheckbox->setChecked(false);
+});
+connect(rotationResetButton, &QPushButton::clicked, this, [this]() {
+    rotationCheckbox->setChecked(false);
+});
+
+// Hilfsfunktion für Button-Farbe
+auto updateResetButtonColor = [](QPushButton *button, bool active) {
+    if (active) {
+        button->setStyleSheet("color: red;");
+    } else {
+        button->setStyleSheet("color: black;");
+    }
+};
+
+// Direkt nach dem Erstellen der Buttons und Checkboxen:
+updateResetButtonColor(hflipResetButton, hflipCheckbox->isChecked());
+updateResetButtonColor(vflipResetButton, vflipCheckbox->isChecked());
+updateResetButtonColor(rotationResetButton, rotationCheckbox->isChecked());
+
+// Signal-Slots verbinden
+connect(hflipCheckbox, &QCheckBox::stateChanged, this, [this, hflipResetButton, updateResetButtonColor](int){
+    updateResetButtonColor(hflipResetButton, hflipCheckbox->isChecked());
+});
+connect(vflipCheckbox, &QCheckBox::stateChanged, this, [this, vflipResetButton, updateResetButtonColor](int){
+    updateResetButtonColor(vflipResetButton, vflipCheckbox->isChecked());
+});
+connect(rotationCheckbox, &QCheckBox::stateChanged, this, [this, rotationResetButton, updateResetButtonColor](int){
+    updateResetButtonColor(rotationResetButton, rotationCheckbox->isChecked());
+});
+
 }
 
 MainWindow::~MainWindow() {
@@ -534,175 +670,7 @@ void MainWindow::updateParameterFields() {
     parameterWidget->update();
     parameterWidget->repaint();
 }
-void MainWindow::startRpiCamApp() {
-    QString app = appSelector->currentText();
-    QString camera = cameraSelector->currentText();
-    QString resolution = resolutionSelector->currentText();
-    QString framerate = framerateSelector->currentText();
-    QString preview = previewSelector->currentText();
-    QString timeout = timeoutSelector->currentText();
-    QString outputFile = outputFileName->text();
-    QString path = guiOutputFilePath; // Initialisiere path mit guiOutputFilePath
-    QString timelapse = timelapseInput->text();
-    bool segmentationEnabled = segmentationCheckbox->isChecked();
-    if (timestampCheckbox->isChecked() && !outputFile.isEmpty()) {
-        QDateTime now = QDateTime::currentDateTime();
-        QString timestamp = now.toString("yyyy-MM-dd_HH-mm-ss");
-        QFileInfo fileInfo(outputFile);
-        QString baseName = fileInfo.completeBaseName();
-        QString suffix = fileInfo.suffix();
-        QString directory = fileInfo.path();
-        if (directory.isEmpty() || directory == ".") {
-            directory = guiOutputFilePath;
-        }
-        outputFile = QDir(directory).filePath(baseName + "_" + timestamp + "." + suffix);
-        outputLog->append("Output file with timestamp: " + outputFile);
-    }
-    QStringList resolutionParts = resolution.split("x");
-    QString width = resolutionParts.value(0);
-    QString height = resolutionParts.value(1);
-    QStringList arguments;
-    arguments << "--camera" << camera
-              << "--width" << width
-              << "--height" << height
-              << "--framerate" << framerate;
-    QString previewValue = previewSelector->currentData().toString();
-    if (!previewValue.isEmpty()) {
-        arguments << previewValue; // Füge den Parameter mit Präfix hinzu
-    }
-    if (!timeout.isEmpty()) {
-        bool ok;
-        int timeoutMs = timeout.toInt(&ok);
-        if (ok) {
-            arguments << "-t" << QString::number(timeoutMs);
-        } else {
-            outputLog->append("Invalid timeout value. Using default.");
-            arguments << "-t" << "0";
-        }
-    } else {
-        arguments << "-t" << "0";
-    }
-    if (!timelapse.isEmpty()) {
-        bool ok;
-        int timelapseMs = timelapse.toInt(&ok);
-        if (ok) {
-            arguments << "--timelapse" << QString::number(timelapseMs);
-        } else {
-            outputLog->append("Invalid timelapse value. Skipping.");
-        }
-    }
-    if (segmentationEnabled) {
-        arguments << "--segment" << "_%04d";
-    }
-    if (!outputFile.isEmpty() && !QFileInfo(outputFile).isAbsolute()) {
-        outputFile = QDir(path).filePath(outputFile); // Kombiniere mit guiOutputFilePath
-    }
-    if (!outputFile.isEmpty()) {
-        arguments << "-o" << outputFile;
-    } else {
-    }
-    QString postProcessFile = postProcessFileSelector->currentText();
-    if (!postProcessFile.isEmpty()) {
-        QString postProcessFilePath = "/home/admin/rpicam-apps/assets/" + postProcessFile;
-        arguments << "--post-process-file" << postProcessFilePath;
-    }
-    QString Box = BoxInput->text();
-    if (!Box.isEmpty()) {
-        arguments << "--preview" << Box;
-    }
-    if (app == "rpicam-vid") {
-        QString codec = codecSelector->currentText();
-        if (!codec.isEmpty()) {
-            arguments << "--codec" << codec;
-        }
-    }
-    QString awb = awbSelector->currentText();
-    if (awb != "auto") { // Nur hinzufügen, wenn der Wert nicht "auto" ist
-        arguments << "--awb" << awb;
-    }
-    double sharpness = sharpnessInput->text().toDouble();
-if (sharpness != 1.0) { // Nur hinzufügen, wenn nicht Standardwert
-    arguments << "--sharpness" << QString::number(sharpness, 'f', 1);
-    }
-    double ev = evInput->text().toDouble();
-    if (ev != 0.0) { // Nur hinzufügen, wenn nicht Standardwert
-    arguments << "--ev" << QString::number(ev, 'f', 1);
-    }
-    double gain = gainInput->text().toDouble();
-    if (gain != 0.0) { // Nur hinzufügen, wenn nicht Standardwert
-        arguments << "--gain" << QString::number(gain, 'f', 1);
-    }
-    double brightness = brightnessInput->text().toDouble();
-    if (brightness != 0.0) { // Nur hinzufügen, wenn nicht Standardwert
-    arguments << "--brightness" << QString::number(brightness, 'f', 1);
-    }
-    double contrast = contrastInput->text().toDouble();
-    if (contrast != 1.0) { // Nur hinzufügen, wenn nicht Standardwert
-        arguments << "--contrast" << QString::number(contrast, 'f', 1);
-    }
-    double saturation = saturationInput->text().toDouble();
-    if (saturation != 1.0) { // Nur hinzufügen, wenn nicht Standardwert
-        arguments << "--saturation" << QString::number(saturation, 'f', 1);
-    }
-    QString fullCommand = app + " " + arguments.join(" ");
-    qDebug().noquote() << "Full command:" << fullCommand;
-    process.start(app, arguments);
-    if (!process.waitForStarted()) {
-    } else {
-    }
-    updateButtonVisibility();
-}
-void MainWindow::stopRpiCamApp() {
-    if (process.state() == QProcess::Running) {
-        kill(process.processId(), SIGINT);
-        if (!process.waitForFinished(5000)) { // Warte bis zu 5 Sekunden
-            process.kill(); // Erzwinge das Beenden, falls der Prozess nicht reagiert
-            process.waitForFinished();
-        }
-        outputLog->append("Process terminated.");
-    } else {
-        outputLog->append("No running process to terminate.");
-    }
-    updateButtonVisibility();
-}
-void MainWindow::parseListCamerasOutput(const QString &output) {
-    cameraSelector->clear();
-    resolutionSelector->clear();
-    framerateSelector->clear();
-    cameraDetails.clear();
-    QStringList lines = output.split("\n", Qt::SkipEmptyParts);
-    for (const QString &line : lines) {
-        QRegularExpression regexCamera(R"(^(\d+)\s*:\s*(.+))");
-        QRegularExpression regexMode(R"((\d+x\d+)\s*\[\s*([\d.]+)\s*fps)");
-        QRegularExpressionMatch matchCamera = regexCamera.match(line);
-        if (matchCamera.hasMatch()) {
-            QString cameraIndex = matchCamera.captured(1);
-            QString cameraDescription = matchCamera.captured(2);
-            cameraSelector->addItem(cameraIndex);
-            cameraDetails[cameraIndex] = cameraDescription;
-        }
-        QRegularExpressionMatch matchMode = regexMode.match(line);
-        if (matchMode.hasMatch()) {
-            QString resolution = matchMode.captured(1);
-            QString framerate = matchMode.captured(2);
-            if (!resolutionSelector->findText(resolution)) {
-                resolutionSelector->addItem(resolution);
-            }
-            if (!framerateSelector->findText(framerate)) {
-                framerateSelector->addItem(framerate + " fps");
-            }
-        }
-    }
-    resolutionSelector->addItem("1332x990");
-    resolutionSelector->addItem("2028x1080");
-    resolutionSelector->addItem("2028x1520");
-    resolutionSelector->addItem("4056x3040");
-    if (cameraSelector->count() == 0) {
-        outputLog->append("No cameras found.");
-    } else {
-        outputLog->append("Cameras detected and added to the dropdown.");
-    }
-}
+
 void MainWindow::updateCameraInfo(int index) {
     if (index >= 0 && index < cameraSelector->count()) {
         QString selectedCamera = cameraSelector->itemText(index);
@@ -762,223 +730,13 @@ void MainWindow::showHelp() {
         "For more information, refer to the documentation.");
 }
 void MainWindow::updateCodecVisibility(const QString &selectedApp) {
-    if (selectedApp == "rpicam-vid") {
-        if (codecLabel && codecSelector) { // Überprüfen Sie, ob die Zeiger gültig sind
-            codecLabel->setVisible(true);
-            codecSelector->setVisible(true);
-        }
-    } else {
-        if (codecLabel && codecSelector) { // Überprüfen Sie, ob die Zeiger gültig sind
-            codecLabel->setVisible(false);
-            codecSelector->setVisible(false);
-        }
-    }
-}
-void MainWindow::saveConfigurationToFile(const QString &filePath) {
-    QFile file(filePath);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QTextStream out(&file);
+    // Überprüfen, ob die App Codec-Optionen benötigt
+    bool showCodec = (selectedApp == "rpicam-vid" || selectedApp == "rpicam-focus" || selectedApp == "rpicam-focus008");
 
-        // Speichere die Kamera, falls gesetzt
-        if (!cameraSelector->currentText().isEmpty()) {
-            out << "camera=" << cameraSelector->currentText() << "\n";
-        }
-
-        // Speichere qt-preview, fullscreen oder nopreview
-        QString previewValue = previewSelector->currentData().toString();
-        if (previewValue == "--qt-preview") {
-            out << "qt-preview=\n"; // Speichere qt-preview
-        } else if (previewValue == "--fullscreen") {
-            out << "fullscreen=1\n"; // Speichere fullscreen
-        } else if (previewValue == "--nopreview") {
-            out << "nopreview=1\n"; // Speichere nopreview
-        }
-
-        // Speichere Vorschaufenstermaße (preview=x,y,w,h)
-        if (!BoxInput->text().isEmpty()) {
-            out << "preview=" << BoxInput->text() << "\n";
-        }
-
-        QString width = resolutionSelector->currentText().split("x").value(0);
-        QString height = resolutionSelector->currentText().split("x").value(1);
-        if (!width.isEmpty() && !height.isEmpty()) {
-            out << "width=" << width << "\n";
-            out << "height=" << height << "\n";
-        }
-
-        if (!framerateSelector->currentText().isEmpty()) {
-            out << "framerate=" << framerateSelector->currentText() << "\n";
-        }
-
-        if (!timeoutSelector->currentText().isEmpty()) {
-            out << "timeout=" << timeoutSelector->currentText() << "\n";
-        }
-
-        if (awbSelector->currentText() != "auto") {
-            out << "awb=" << awbSelector->currentText() << "\n";
-        }
-
-        double sharpness = sharpnessInput->text().toDouble();
-        if (sharpness != DEFAULT_SHARPNESS) {
-            out << "sharpness=" << QString::number(sharpness, 'f', 1) << "\n";
-        }
-
-        double ev = evInput->text().toDouble();
-        if (ev != DEFAULT_EV) {
-            out << "ev=" << QString::number(ev, 'f', 1) << "\n";
-        }
-
-        double gain = gainInput->text().toDouble();
-        if (gain != DEFAULT_GAIN) {
-            out << "gain=" << QString::number(gain, 'f', 1) << "\n";
-        }
-
-        double brightness = brightnessInput->text().toDouble();
-        if (brightness != DEFAULT_BRIGHTNESS) {
-            out << "brightness=" << QString::number(brightness, 'f', 1) << "\n";
-        }
-
-        double contrast = contrastInput->text().toDouble();
-        if (contrast != DEFAULT_CONTRAST) {
-            out << "contrast=" << QString::number(contrast, 'f', 1) << "\n";
-        }
-
-        double saturation = saturationInput->text().toDouble();
-        if (saturation != DEFAULT_SATURATION) {
-            out << "saturation=" << QString::number(saturation, 'f', 1) << "\n";
-        }
-
-        // Speichere den Codec, wenn die App rpicam-vid ist
-        if (appSelector->currentText() == "rpicam-vid") {
-            QString codec = codecSelector->currentText();
-            if (!codec.isEmpty()) { // Speichere den Codec nur, wenn er nicht leer ist
-                out << "codec=" << codec << "\n";
-                qDebug() << "[DEBUG] Codec saved as:" << codec;
-            }
-        }
-
-        // Speichere den vollständigen Pfad der Post-Process-Datei, falls vorhanden
-        QString postProcessFile = postProcessFileSelector->currentText();
-        if (!postProcessFile.isEmpty()) {
-            QString postProcessFilePath = "/home/admin/rpicam-apps/assets/" + postProcessFile;
-            out << "post-process-file=" << postProcessFilePath << "\n";
-        }
-
-        // Speichere das Output-File, falls vorhanden
-        QString outputFile = outputFileName->text();
-        if (!outputFile.isEmpty()) {
-            QString outputFilePath;
-            if (QDir::isAbsolutePath(outputFile)) {
-                // Wenn der Pfad bereits absolut ist, verwende ihn direkt
-                outputFilePath = QDir::cleanPath(outputFile);
-            } else {
-                // Wenn der Pfad relativ ist, füge das Basisverzeichnis hinzu
-                outputFilePath = QDir::cleanPath("/home/admin/rpicam-output/" + outputFile);
-            }
-            out << "output=" << outputFilePath << "\n";
-        }
-
-        // Speichere den Timelapse-Wert, falls gesetzt
-        QString timelapseValue = timelapseInput->text();
-        if (!timelapseValue.isEmpty()) {
-            out << "timelapse=" << timelapseValue << "\n";
-            qDebug() << "[DEBUG] Timelapse saved as:" << timelapseValue;
-        }
-
-        file.close();
-        outputLog->append("Configuration saved to " + filePath);
-    } else {
-        outputLog->append("Failed to save configuration to " + filePath);
-    }
-}
-void MainWindow::loadConfigurationFromFile(const QString &filePath) {
-    QFile file(filePath);
-    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&file);
-
-        QString width, height; // Temporäre Variablen für Breite und Höhe
-
-        while (!in.atEnd()) {
-            QString line = in.readLine().trimmed();
-            if (line.startsWith("#") || line.isEmpty()) {
-                continue; // Kommentare und leere Zeilen überspringen
-            }
-
-            QStringList parts = line.split("=", Qt::KeepEmptyParts);
-            if (parts.size() != 2) {
-                continue; // Ungültige Zeilen überspringen
-            }
-
-            QString key = parts[0].trimmed();
-            QString value = parts[1].trimmed();
-
-            if (key == "camera") {
-                cameraSelector->setCurrentText(value);
-            } else if (key == "qt-preview") {
-                previewSelector->setCurrentIndex(previewSelector->findData("--qt-preview"));
-            } else if (key == "fullscreen") {
-                previewSelector->setCurrentIndex(previewSelector->findData("--fullscreen"));
-            } else if (key == "nopreview") {
-                previewSelector->setCurrentIndex(previewSelector->findData("--nopreview"));
-            } else if (key == "timeout") {
-                timeoutSelector->setCurrentText(value);
-            } else if (key == "preview") {
-                BoxInput->setText(value);
-            } else if (key == "width") {
-                width = value; // Speichere die Breite
-            } else if (key == "height") {
-                height = value; // Speichere die Höhe
-            } else if (key == "framerate") {
-                framerateSelector->setCurrentText(value);
-            } else if (key == "awb") {
-                awbSelector->setCurrentText(value);
-            } else if (key == "sharpness") {
-                sharpnessInput->setText(value);
-                sharpnessSlider->setValue(static_cast<int>(value.toDouble() * 10));
-            } else if (key == "ev") {
-                evInput->setText(value);
-                evSlider->setValue(static_cast<int>(value.toDouble() * 10));
-            } else if (key == "gain") {
-                gainInput->setText(value);
-                gainSlider->setValue(static_cast<int>(value.toDouble() * 10));
-            } else if (key == "brightness") {
-                brightnessInput->setText(value);
-                brightnessSlider->setValue(static_cast<int>(value.toDouble() * 10));
-            } else if (key == "contrast") {
-                contrastInput->setText(value);
-                contrastSlider->setValue(static_cast<int>(value.toDouble() * 10));
-            } else if (key == "saturation") {
-                saturationInput->setText(value);
-                saturationSlider->setValue(static_cast<int>(value.toDouble() * 10));
-            } else if (key == "post-process-file") {
-                postProcessFileSelector->setCurrentText(value);
-            } else if (key == "output") {
-                outputFileName->setText(value);
-            } else if (key == "timelapse") {
-                timelapseInput->setText(value);
-            }
-        }
-
-        // Setze die Auflösung, falls Breite und Höhe vorhanden sind
-        if (!width.isEmpty() && !height.isEmpty()) {
-            QString resolution = width + "x" + height;
-            if (resolutionSelector->findText(resolution) == -1) {
-                resolutionSelector->addItem(resolution); // Füge die Auflösung hinzu, falls sie nicht existiert
-            }
-            resolutionSelector->setCurrentText(resolution); // Setze die aktuelle Auflösung
-        }
-
-        file.close();
-        outputLog->append("Configuration loaded from " + filePath);
-
-        // Aktualisiere die GUI
-        cameraSelector->update();
-        previewSelector->update();
-        resolutionSelector->update();
-        framerateSelector->update();
-        postProcessFileSelector->update();
-    } else {
-        outputLog->append("Failed to load configuration from " + filePath);
+    if (codecLabel && codecSelector && resetCodecButton) { // Überprüfen, ob die Zeiger gültig sind
+        codecLabel->setVisible(showCodec);
+        codecSelector->setVisible(showCodec);
+        resetCodecButton->setVisible(showCodec); // Reset-Button ebenfalls ein-/ausblenden
     }
 }
 
@@ -999,7 +757,7 @@ void MainWindow::showAboutDialog() {
 
     // Hintergrundgrafik
     QLabel *backgroundLabel = new QLabel(&aboutDialog);
-        backgroundLabel->setPixmap(QPixmap("/home/admin/rpicam-gui/resources/images/rpicam-gui.png"));
+    backgroundLabel->setPixmap(QPixmap("/home/admin/rpicam-gui/resources/images/rpicam-gui.png"));
     backgroundLabel->setScaledContents(true);
     backgroundLabel->setGeometry(0, 0, 400, 473);
 
@@ -1007,7 +765,7 @@ void MainWindow::showAboutDialog() {
     QLabel *textLabel = new QLabel(&aboutDialog);
     textLabel->setText(QString(
         "<h1 style='color: white;'>rpicam-gui</h1>"
-                "<p style='color: white;'>A graphical user interface</p>"
+        "<p style='color: white;'>A graphical user interface</p>"
         "<p style='color: white;'>for controlling rpicam-apps.</p>"
         "<p style='color: white;'>Built with Qt version: %1</p>"
         "<p style='color: white;'>Developed by <b>Kletternaut</b>, 2025</p>"
@@ -1109,19 +867,26 @@ QString MainWindow::calculateBoxInput(int additionalOffsetY) {
 }
 void MainWindow::openGuiSetupDialog() {
     GuiSetupDialog setupDialog(this);
+    setupDialog.loadGuiSettings();
+
     if (setupDialog.exec() == QDialog::Accepted) {
-        loadGuiConfiguration(); // Konfiguration neu laden
+        customAppEntries = setupDialog.getCustomAppEntries(); // Benutzerdefinierte Apps abrufen
+        updateAppSelector(); // Dropdown aktualisieren
+        loadGuiConfiguration(); // GUI-Konfiguration laden
     }
 }
+
 void MainWindow::loadGuiConfiguration() {
     QString defaultConfigFilePath = "/home/admin/rpicam-gui/rpicam-gui.conf";
     QSettings settings(defaultConfigFilePath, QSettings::IniFormat);
 
     guiOutputFilePath = QDir::cleanPath(settings.value("Paths/GuiOutputPath", "/home/admin/rpicam-gui/output").toString());
     guiPostProcessFilePath = QDir::cleanPath(settings.value("Paths/GuiPostProcessPath", "/home/admin/rpicam-apps/assets").toString());
-    rpicamConfigPath = QDir::cleanPath(settings.value("Paths/GuiRpicamConfigPath", "/home/admin/rpicam-gui/config").toString()); // Lade den rpicam config file path
+    rpicamConfigPath = QDir::cleanPath(settings.value("Paths/GuiRpicamConfigPath", "/home/admin/rpicam-gui/config").toString());
 
     qDebug() << "Loaded rpicamConfigPath:" << rpicamConfigPath;
+
+    updatePostProcessFileDropdown(); // <-- hier Dropdown füllen
 }
 void MainWindow::parseConfigurationFile(const QString &filePath) {
     QFile file(filePath);
@@ -1229,4 +994,37 @@ void MainWindow::setupAdvancedOptionsLayout() {
     advancedLayout->addWidget(segmentationCheckbox);
     advancedLayout->addWidget(timestampCheckbox);
     mainLayout->addLayout(advancedLayout);
+}
+void MainWindow::updatePostProcessFileDropdown() {
+    if (!postProcessFileSelector) return;
+    if (guiPostProcessFilePath.isEmpty()) return;
+    QDir dir(guiPostProcessFilePath);
+    if (!dir.exists()) return;
+
+    // Vorherige Auswahl merken
+    QString previousSelection = postProcessFileSelector->currentText();
+
+    postProcessFileSelector->clear();
+    QStringList jsonFiles = dir.entryList(QStringList() << "*.json", QDir::Files);
+    for (const QString &file : jsonFiles) {
+        postProcessFileSelector->addItem(file);
+    }
+
+    // Versuche, die vorherige Auswahl wiederherzustellen
+    int idx = postProcessFileSelector->findText(previousSelection);
+    if (idx >= 0) {
+        postProcessFileSelector->setCurrentIndex(idx);
+    } else {
+        postProcessFileSelector->setCurrentIndex(-1);
+        postProcessFileSelector->setCurrentText("");
+    }
+
+    qDebug() << "updatePostProcessFileDropdown called";
+    qDebug() << "guiPostProcessFilePath:" << guiPostProcessFilePath;
+}
+
+void MainWindow::updateAppSelector() {
+    appSelector->clear();
+    appSelector->addItems({"rpicam-vid", "rpicam-jpeg", "rpicam-still", "rpicam-raw", "rpicam-hello"});
+    appSelector->addItems(customAppEntries); // Benutzerdefinierte Apps hinzufügen
 }

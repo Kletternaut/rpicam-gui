@@ -29,16 +29,18 @@ class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void startRpiCamApp();
+    void saveConfigurationToFile(const QString &filePath);
+    void loadConfigurationFromFile(const QString &filePath);
+    void parseListCamerasOutput(const QString &output);
+    void stopRpiCamApp();
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
     void showEvent(QShowEvent *event) override;
 
 private slots:
-    void startRpiCamApp();
-    void stopRpiCamApp();
     void updateParameterFields();
-    void parseListCamerasOutput(const QString &output);
     void showHelp();
     void showAboutDialog();
     void updateBoxInputFromSelection(const QRect &selection);
@@ -91,14 +93,15 @@ private:
     QLineEdit *contrastInput;
     QSlider *saturationSlider;
     QLineEdit *saturationInput;
+    QCheckBox *hflipCheckbox = nullptr;
+    QCheckBox *vflipCheckbox = nullptr;
+    QCheckBox *rotationCheckbox = nullptr;
     void updateCameraInfo(int index);
     void updateFramerateOptions(const QString &resolution);
     void openSaveFileDialog();
     void updateTimelapseField();
     void updateButtonVisibility();
     void updateCodecVisibility(const QString &selectedApp);
-    void saveConfigurationToFile(const QString &filePath);
-    void loadConfigurationFromFile(const QString &filePath);
     void setupLayout(); // Deklaration der Methode hinzufügen
     void updateResetButtonColor(QPushButton *button, double currentValue, double defaultValue);
     QString calculateBoxInput(int additionalOffsetY = 0);
@@ -114,9 +117,16 @@ private:
     void setupOutputLayout();
     void setupSliderLayout();
     void setupAdvancedOptionsLayout();
+    void updatePostProcessFileDropdown();
 
     QVBoxLayout *mainLayout;
     QCheckBox *doubleSizeCheckbox; // Checkbox für die Verdopplung der Größe
     QString rpicamConfigPath; // Speichert den rpicam config file path
+    QPushButton *resetPostProcessFileButton;
+    QPushButton *resetCodecButton;
+    QPushButton *resetAwbButton;
+    QStringList customAppEntries; // Liste für benutzerdefinierte Apps
+    void updateAppSelector();    // Methode, um das Dropdown zu aktualisieren
 };
 #endif // MAINWINDOW_H
+
