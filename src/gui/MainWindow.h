@@ -38,6 +38,7 @@ public:
 protected:
     void resizeEvent(QResizeEvent *event) override;
     void showEvent(QShowEvent *event) override;
+    void moveEvent(QMoveEvent *event) override;
 
 private slots:
     void updateParameterFields();
@@ -66,7 +67,7 @@ private:
     QLineEdit *timeoutInput;
     QComboBox *timeoutSelector;
     QLineEdit *timelapseInput;
-    QCheckBox *segmentationCheckbox;
+    QCheckBox *segmentationCheckbox = nullptr;
     QProcess process;
     QPushButton *stopButton;
     QPushButton *startStopButton;
@@ -96,6 +97,7 @@ private:
     QCheckBox *hflipCheckbox = nullptr;
     QCheckBox *vflipCheckbox = nullptr;
     QCheckBox *rotationCheckbox = nullptr;
+    QLineEdit *shutterInput = nullptr;
     void updateCameraInfo(int index);
     void updateFramerateOptions(const QString &resolution);
     void openSaveFileDialog();
@@ -118,8 +120,10 @@ private:
     void setupSliderLayout();
     void setupAdvancedOptionsLayout();
     void updatePostProcessFileDropdown();
+    void updateTimelapseVisibility();
 
-    QVBoxLayout *mainLayout;
+    QVBoxLayout *mainLayout = nullptr;
+    QHBoxLayout *boxLayout = nullptr;
     QCheckBox *doubleSizeCheckbox; // Checkbox für die Verdopplung der Größe
     QString rpicamConfigPath; // Speichert den rpicam config file path
     QPushButton *resetPostProcessFileButton;
@@ -127,6 +131,13 @@ private:
     QPushButton *resetAwbButton;
     QStringList customAppEntries; // Liste für benutzerdefinierte Apps
     void updateAppSelector();    // Methode, um das Dropdown zu aktualisieren
+    QHBoxLayout *timelapseLayout = nullptr;
+    QHBoxLayout *timeoutLayout = nullptr;
+    void updateOutputFileNameForTimelapse();
+    QWidget *timelapseRowWidget = nullptr;
+    QPushButton *timelapseResetButton = nullptr;
+    QPushButton *overlayResetButton = nullptr;
+    void updateOverlayResetButtonColor(QPushButton *button);
 };
 #endif // MAINWINDOW_H
 

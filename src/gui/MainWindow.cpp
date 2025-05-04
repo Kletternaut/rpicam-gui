@@ -33,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
     DebugLogger::initialize("debug.log");
     postProcessFileSelector = new QComboBox(this);
     resetPostProcessFileButton = new QPushButton("✕", this);
-    resetPostProcessFileButton->setFixedWidth(24); // gleiche Größe wie bei den Slidern
+    resetPostProcessFileButton->setFixedWidth(20); // gleiche Größe wie bei den Slidern
     resetPostProcessFileButton->setToolTip("Reset Auswahl");
     qDebug() << "postProcessFileSelector:" << postProcessFileSelector;
     loadGuiConfiguration();
@@ -49,13 +49,14 @@ MainWindow::MainWindow(QWidget *parent)
     startStopButton = new QPushButton("Start", this);
     outputFileName = new QLineEdit(this);
     browseButton = new QPushButton("Browse", this);
+    browseButton->setFixedWidth(80);
     timeoutSelector = new QComboBox(this);
     timelapseInput = new QLineEdit(this);
-    segmentationCheckbox = new QCheckBox("Enable Segmentation (_%04d)", this);
+    segmentationCheckbox = new QCheckBox("Segment", this);
     postProcessFileBrowseButton = new QPushButton("Browse", this);
+    postProcessFileBrowseButton->setFixedWidth(80);
     customPreviewInput = new QLineEdit(this);
     BoxInput = new CustomLineEdit(this);
-    timestampCheckbox = new QCheckBox("TS", this);
     selectionOverlay = new SelectionOverlay(nullptr); // Kein Eltern-Widget
     awbSelector = new QComboBox(this);
     sharpnessSlider = new QSlider(Qt::Horizontal, this);
@@ -73,6 +74,9 @@ MainWindow::MainWindow(QWidget *parent)
     hflipCheckbox = new QCheckBox("", this);
     vflipCheckbox = new QCheckBox("", this);
     rotationCheckbox = new QCheckBox("", this);
+    timestampCheckbox = new QCheckBox("TS", this);
+    autoNamingCheckbox = new QCheckBox("AN", this);
+
     initializeSelectionOverlay();
     initializeBoxInput();
     appSelector->setToolTip("Select the application to run (e.g., rpicam-still or rpicam-vid).");
@@ -83,7 +87,8 @@ MainWindow::MainWindow(QWidget *parent)
     outputFileName->setToolTip("Specify the output file name.");
     browseButton->setToolTip("Browse for a location to save the output file.");
     timestampCheckbox->setToolTip("Enable this option to add a timestamp to the output file.");
-    segmentationCheckbox->setToolTip("Enable segmentation to split output files into parts.");
+    autoNamingCheckbox->setToolTip("enable auto naming");
+    //segmentationCheckbox->setToolTip("Enable segmentation to split output files into parts.");
     timelapseInput->setToolTip("Set the interval for timelapse photography.");
     setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), QGuiApplication::primaryScreen()->availableGeometry()));
     timeoutSelector->setEditable(true);
@@ -101,8 +106,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
 }
     updateAppSelector();
-    timelapseInput->setPlaceholderText("Interval (ms)");
-    timelapseInput->setVisible(true); // Standardmäßig ausgeblendet
+
     previewSelector->clear();
     previewSelector->addItem("", "");
     previewSelector->addItem("Fullscreen", "--fullscreen");
@@ -112,7 +116,7 @@ MainWindow::MainWindow(QWidget *parent)
     postProcessFileSelector->setEditable(true); // Benutzerdefinierte Eingaben erlauben
     postProcessFileSelector->setCurrentText(""); // Standardwert leer setzen
 
-    auto *mainLayout = new QVBoxLayout;
+    mainLayout = new QVBoxLayout;
     auto *inputLayout = new QHBoxLayout;
     inputLayout->addWidget(new QLabel("App:"));
     inputLayout->addWidget(appSelector);
@@ -120,32 +124,29 @@ MainWindow::MainWindow(QWidget *parent)
     inputLayout->addWidget(cameraSelector);
     inputLayout->addWidget(new QLabel("Size:"));
     inputLayout->addWidget(resolutionSelector);
-    inputLayout->addWidget(new QLabel("f/s:"));
+    inputLayout->addWidget(new QLabel("fps:"));
     inputLayout->addWidget(framerateSelector);
     inputLayout->addWidget(new QLabel("Preview:"));
     inputLayout->addWidget(previewSelector);
     BoxInput->setPlaceholderText("Double-click to toggle overlay");
     BoxInput->setToolTip("Double-click to toggle the overlay visibility.");
     BoxInput->setFixedWidth(150); // Setze die Breite des Overlay-Input-Felds auf 150 Pixel
-    // Erstelle eine QGroupBox für Overlay-Optionen
-    QGroupBox *overlayGroup = new QGroupBox("", this);
-    overlayGroup->setFixedWidth(330); // Breite der QGroupBox auf 330 Pixel setzen
-    QVBoxLayout *overlayLayout = new QVBoxLayout;
 
-    // Füge die Elemente zur QGroupBox hinzu
-        auto *boxLayout = new QHBoxLayout;
+    // Overlay-Layout Optionen
+    boxLayout = new QHBoxLayout;
+    boxLayout->setContentsMargins(0, 0, 0, 0);
+    boxLayout->setSpacing(4); // oder 0
+    boxLayout->insertStretch(0, 1);
     boxLayout->addWidget(new QLabel("Overlay:", this));
     boxLayout->addWidget(BoxInput);
     doubleSizeCheckbox = new QCheckBox("x2", this);
     boxLayout->addWidget(doubleSizeCheckbox);
     auto *resetButton = new QPushButton("✕", this);
+    overlayResetButton = resetButton;
     resetButton->setFixedWidth(20);
     boxLayout->addWidget(resetButton);
-    overlayLayout->addLayout(boxLayout);
-    overlayGroup->setLayout(overlayLayout);
+    mainLayout->addLayout(boxLayout);
 
-    // Füge die QGroupBox zum Hauptlayout hinzu
-    mainLayout->addWidget(overlayGroup);
     connect(resetButton, &QPushButton::clicked, this, [this]() {
         QString defaultBoxValue = calculateBoxInput(+30);
         BoxInput->setText(defaultBoxValue);
@@ -156,37 +157,80 @@ MainWindow::MainWindow(QWidget *parent)
         BoxInput->setText(updatedBoxValue); // Aktualisiere das BoxInput-Feld
         qDebug() << "BoxInput updated after x2 checkbox state change:" << updatedBoxValue;
     });
+    
+    auto *resetOutputFileButton = new QPushButton("✕", this);
+    resetOutputFileButton->setFixedWidth(20);
+    resetOutputFileButton->setToolTip("Reset Output File");
+
     auto *outputLayout = new QHBoxLayout;
     outputLayout->addWidget(new QLabel("Output File:"));
+    outputLayout->addWidget(autoNamingCheckbox);
+    //outputLayout->addWidget(segmentationCheckbox);
+    outputLayout->addWidget(timestampCheckbox);
     outputLayout->addWidget(outputFileName);
     outputLayout->addWidget(browseButton);
-    autoNamingCheckbox = new QCheckBox("AN", this);
-    autoNamingCheckbox->setToolTip("enable auto naming");
-    outputLayout->addWidget(autoNamingCheckbox);
-    outputLayout->addWidget(segmentationCheckbox);
-    outputLayout->addWidget(timestampCheckbox);
-    auto *timeoutLayout = new QHBoxLayout;
+    outputLayout->addWidget(resetOutputFileButton);
+
+    updateResetButtonColor(resetOutputFileButton, !outputFileName->text().isEmpty(), 0);
+
+    connect(outputFileName, &QLineEdit::textChanged, this, [this, resetOutputFileButton](const QString &text) {
+        updateResetButtonColor(resetOutputFileButton, !text.isEmpty(), 0);
+    });
+
+    // Verbindung für den Reset-Button
+    connect(resetOutputFileButton, &QPushButton::clicked, this, [this, resetOutputFileButton]() {
+        outputFileName->clear();
+        updateResetButtonColor(resetOutputFileButton, 0, 0);
+    });
+
+    timeoutLayout = new QHBoxLayout;
     timeoutLayout->addWidget(new QLabel("Timeout (ms):"));
     timeoutLayout->addWidget(timeoutSelector);
     timeoutSelector->setFixedWidth(170);
-    auto *timelapseLayout = new QHBoxLayout;
+
+    // Shutter-Zeile
+    auto *shutterLayout = new QHBoxLayout;
+    auto *shutterLabel = new QLabel("Shutter (ms):", this);
+    shutterInput = new QLineEdit(this);
+    shutterInput->setFixedWidth(170);
+    shutterInput->setPlaceholderText("Interval (ms)");
+    shutterLayout->addWidget(shutterLabel);
+    shutterLayout->addWidget(shutterInput);
+
+    // Timelapse-Zeile als eigenes Widget
+    timelapseRowWidget = new QWidget(this);
+    timelapseLayout = new QHBoxLayout(timelapseRowWidget);
+    timelapseLayout->setContentsMargins(0, 0, 0, 0);
     timelapseLayout->addWidget(new QLabel("Timelapse:"));
     timelapseLayout->addWidget(timelapseInput);
     timelapseInput->setFixedWidth(170);
+    timelapseLayout->addWidget(timelapseResetButton);
+
     auto *postProcessLayout = new QHBoxLayout;
     postProcessLayout->addWidget(new QLabel("Post-Process File:"));
     postProcessLayout->addWidget(postProcessFileSelector);
     postProcessLayout->addWidget(postProcessFileBrowseButton);
     postProcessLayout->addWidget(resetPostProcessFileButton); // Füge den Reset-Button hinzu
+    
     mainLayout->addLayout(inputLayout);
     mainLayout->addLayout(outputLayout);
+    mainLayout->addLayout(postProcessLayout);
     mainLayout->addLayout(timeoutLayout);
-    mainLayout->addLayout(timelapseLayout); // Timelapse-Feld hinzufügen
-    mainLayout->addLayout(postProcessLayout); // Post-Process-Dropdown hinzufügen
+    //mainLayout->addLayout(timelapseLayout); // Timelapse-Feld hinzufügen
+    //mainLayout->addLayout(shutterLayout);
+    
+    auto *timelapseShutterContainer = new QVBoxLayout;
+    timelapseShutterContainer->addWidget(timelapseRowWidget);
+    timelapseShutterContainer->addLayout(shutterLayout);
+    mainLayout->addLayout(timeoutLayout);
+    mainLayout->addLayout(timelapseShutterContainer);
+
+    updateTimelapseVisibility();
+    connect(appSelector, &QComboBox::currentTextChanged, this, &MainWindow::updateTimelapseVisibility);
+
     mainLayout->addWidget(cameraInfo);
     mainLayout->addWidget(parameterWidget);
     mainLayout->addWidget(outputLog);
-    mainLayout->addWidget(startStopButton);
     mainLayout->addWidget(startStopButton);
     codecLabel = new QLabel("Codec:", this);
     codecSelector = new QComboBox(this);
@@ -250,6 +294,7 @@ MainWindow::MainWindow(QWidget *parent)
     auto *outerWidget = new QWidget(this);
     outerWidget->setLayout(outerLayout);
     setCentralWidget(outerWidget);
+    connect(appSelector, &QComboBox::currentTextChanged, this, &MainWindow::updateTimelapseVisibility);
     connect(appSelector, &QComboBox::currentTextChanged, this, &MainWindow::updateCodecVisibility);
     connect(appSelector, &QComboBox::currentTextChanged, this, &MainWindow::updateParameterFields);
     connect(cameraSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::updateCameraInfo);
@@ -281,17 +326,11 @@ MainWindow::MainWindow(QWidget *parent)
     }
     updateCodecVisibility(appSelector->currentText());
     createMenus();
-    connect(selectionOverlay, &SelectionOverlay::selectionChanged, this, &MainWindow::updateBoxInputFromSelection);
-    if (selectionOverlay) {
-        connect(selectionOverlay, &SelectionOverlay::selectionChanged, this, &MainWindow::updateBoxInputFromSelection);
-    }
-    if (!selectionOverlay) {
-        return;
-    } else {
-    }
+
     connect(selectionOverlay, &SelectionOverlay::selectionChanged, this, [this](const QRect &selection) {
         updateBoxInputFromSelection(selection);
     });
+
     awbSelector->addItems({"auto", "incandescent", "tungsten", "fluorescent", "indoor", "daylight", "cloudy", "custom"});
     awbSelector->setCurrentText("auto"); // Standardwert setzen
     awbSelector->setToolTip("Select the AWB (Auto White Balance) mode.");
@@ -567,7 +606,6 @@ connect(postProcessFileSelector, &QComboBox::currentTextChanged, this, [this](co
     updateResetButtonColor(resetPostProcessFileButton, hasSelection ? 1 : 0, 0);
 });
 
-
 auto *hflipResetButton = new QPushButton("✕", this);
 hflipResetButton->setFixedWidth(20);
 hflipResetButton->setToolTip("Reset Horizontal Flip");
@@ -579,28 +617,10 @@ vflipResetButton->setToolTip("Reset Vertical Flip");
 auto *rotationResetButton = new QPushButton("✕", this);
 rotationResetButton->setFixedWidth(20);
 rotationResetButton->setToolTip("Reset Rotation");
-/**
-mainLayout->addWidget(hflipCheckbox);
-mainLayout->addWidget(vflipCheckbox);
-mainLayout->addWidget(rotationCheckbox);
- */
+
 auto *hflipLayout = new QHBoxLayout;
-hflipLayout->addStretch(); // <-- rechtsbündig
-hflipLayout->addWidget(hflipCheckbox);
-hflipLayout->addWidget(hflipResetButton);
-mainLayout->addLayout(hflipLayout);
-
 auto *vflipLayout = new QHBoxLayout;
-vflipLayout->addStretch(); // <-- rechtsbündig
-vflipLayout->addWidget(vflipCheckbox);
-vflipLayout->addWidget(vflipResetButton);
-mainLayout->addLayout(vflipLayout);
-
 auto *rotationLayout = new QHBoxLayout;
-rotationLayout->addStretch(); // <-- rechtsbündig
-rotationLayout->addWidget(rotationCheckbox);
-rotationLayout->addWidget(rotationResetButton);
-mainLayout->addLayout(rotationLayout);
 
 // Labels erstellen
 auto *hflipLabel = new QLabel("Horizontal Flip:", this);
@@ -626,39 +646,89 @@ rotationLayout->addWidget(rotationCheckbox);
 rotationLayout->addWidget(rotationResetButton);
 mainLayout->addLayout(rotationLayout);
 
-connect(hflipResetButton, &QPushButton::clicked, this, [this]() {
+connect(hflipResetButton, &QPushButton::clicked, this, [this, hflipResetButton]() {
     hflipCheckbox->setChecked(false);
+    updateResetButtonColor(hflipResetButton, hflipCheckbox->isChecked() ? 1 : 0, 0);
 });
-connect(vflipResetButton, &QPushButton::clicked, this, [this]() {
+connect(vflipResetButton, &QPushButton::clicked, this, [this, vflipResetButton]() {
     vflipCheckbox->setChecked(false);
+    updateResetButtonColor(vflipResetButton, vflipCheckbox->isChecked() ? 1 : 0, 0);
 });
-connect(rotationResetButton, &QPushButton::clicked, this, [this]() {
+connect(rotationResetButton, &QPushButton::clicked, this, [this, rotationResetButton]() {
     rotationCheckbox->setChecked(false);
+    updateResetButtonColor(rotationResetButton, rotationCheckbox->isChecked() ? 1 : 0, 0);
 });
 
-// Hilfsfunktion für Button-Farbe
-auto updateResetButtonColor = [](QPushButton *button, bool active) {
-    if (active) {
-        button->setStyleSheet("color: red;");
-    } else {
-        button->setStyleSheet("color: black;");
-    }
-};
-
-// Direkt nach dem Erstellen der Buttons und Checkboxen:
-updateResetButtonColor(hflipResetButton, hflipCheckbox->isChecked());
-updateResetButtonColor(vflipResetButton, vflipCheckbox->isChecked());
-updateResetButtonColor(rotationResetButton, rotationCheckbox->isChecked());
-
-// Signal-Slots verbinden
-connect(hflipCheckbox, &QCheckBox::stateChanged, this, [this, hflipResetButton, updateResetButtonColor](int){
-    updateResetButtonColor(hflipResetButton, hflipCheckbox->isChecked());
+// Signal-Slots verbinden:
+connect(hflipCheckbox, &QCheckBox::stateChanged, this, [this, hflipResetButton](int){
+    updateResetButtonColor(hflipResetButton, hflipCheckbox->isChecked() ? 1 : 0, 0);
 });
-connect(vflipCheckbox, &QCheckBox::stateChanged, this, [this, vflipResetButton, updateResetButtonColor](int){
-    updateResetButtonColor(vflipResetButton, vflipCheckbox->isChecked());
+connect(vflipCheckbox, &QCheckBox::stateChanged, this, [this, vflipResetButton](int){
+    updateResetButtonColor(vflipResetButton, vflipCheckbox->isChecked() ? 1 : 0, 0);
 });
-connect(rotationCheckbox, &QCheckBox::stateChanged, this, [this, rotationResetButton, updateResetButtonColor](int){
-    updateResetButtonColor(rotationResetButton, rotationCheckbox->isChecked());
+connect(rotationCheckbox, &QCheckBox::stateChanged, this, [this, rotationResetButton](int){
+    updateResetButtonColor(rotationResetButton, rotationCheckbox->isChecked() ? 1 : 0, 0);
+});
+
+// Nach dem Setzen von BoxInput:
+connect(BoxInput, &QLineEdit::textChanged, this, [this]() {
+    updateOverlayResetButtonColor(overlayResetButton);
+});
+
+// Nach dem Reset:
+connect(overlayResetButton, &QPushButton::clicked, this, [this]() {
+    QString defaultBoxValue = calculateBoxInput(+30);
+    BoxInput->setText(defaultBoxValue);
+    updateOverlayResetButtonColor(overlayResetButton);
+});
+
+// Im Konstruktor nach dem Aufbau der GUI:
+connect(timelapseInput, &QLineEdit::textChanged, this, &MainWindow::updateOutputFileNameForTimelapse);
+connect(appSelector, &QComboBox::currentTextChanged, this, &MainWindow::updateOutputFileNameForTimelapse);
+connect(outputFileName, &QLineEdit::editingFinished, this, &MainWindow::updateOutputFileNameForTimelapse);
+
+// Im Konstruktor, nach den jeweiligen Eingabefeldern:
+auto *timeoutResetButton = new QPushButton("✕", this);
+timeoutResetButton->setFixedWidth(20);
+timeoutResetButton->setToolTip("Reset Timeout");
+
+timelapseResetButton = new QPushButton("✕", this);
+timelapseResetButton->setFixedWidth(20);
+timelapseResetButton->setToolTip("Reset Timelapse");
+
+auto *shutterResetButton = new QPushButton("✕", this);
+shutterResetButton->setFixedWidth(20);
+shutterResetButton->setToolTip("Reset Shutter");
+
+// add reset buttons to layouts
+timeoutLayout->addWidget(timeoutResetButton);
+timelapseLayout->addWidget(timelapseResetButton);
+shutterLayout->addWidget(shutterResetButton);
+
+// Timeout Reset
+connect(timeoutResetButton, &QPushButton::clicked, this, [this, timeoutResetButton]() {
+    timeoutSelector->setCurrentText("0");
+    updateResetButtonColor(timeoutResetButton, timeoutSelector->currentText().toInt(), 0);
+});
+connect(timeoutSelector, &QComboBox::currentTextChanged, this, [this, timeoutResetButton](const QString &text) {
+    updateResetButtonColor(timeoutResetButton, text.toInt(), 0);
+});
+
+connect(timelapseResetButton, &QPushButton::clicked, this, [this]() {
+    timelapseInput->setText("");
+    updateResetButtonColor(timelapseResetButton, timelapseInput->text().toInt(), 0);
+});
+connect(timelapseInput, &QLineEdit::textChanged, this, [this](const QString &text) {
+    updateResetButtonColor(timelapseResetButton, text.toInt(), 0);
+});
+
+// Shutter Reset
+connect(shutterResetButton, &QPushButton::clicked, this, [this, shutterResetButton]() {
+    shutterInput->setText("");
+    updateResetButtonColor(shutterResetButton, shutterInput->text().toInt(), 0);
+});
+connect(shutterInput, &QLineEdit::textChanged, this, [this, shutterResetButton](const QString &text) {
+    updateResetButtonColor(shutterResetButton, shutterInput->text().toInt(), 0);
 });
 
 }
@@ -799,6 +869,12 @@ void MainWindow::resizeEvent(QResizeEvent *event) {
             selectionOverlay->setGeometry(screen->geometry()); // Vollbild setzen
         }
     }
+    // Overlay-Reset-Button-Farbe aktualisieren
+    updateOverlayResetButtonColor(overlayResetButton);
+}
+void MainWindow::moveEvent(QMoveEvent *event) {
+    QMainWindow::moveEvent(event);
+    updateOverlayResetButtonColor(overlayResetButton);
 }
 void MainWindow::setupLayout() {
     QVBoxLayout *mainLayout = new QVBoxLayout;
@@ -834,7 +910,7 @@ void MainWindow::updateResetButtonColor(QPushButton *button, double currentValue
 }
 void MainWindow::showEvent(QShowEvent *event) {
     QMainWindow::showEvent(event);
-    QString defaultBoxValue = calculateBoxInput();
+    QString defaultBoxValue = calculateBoxInput(+30);
     BoxInput->setText(defaultBoxValue);
 }
 QString MainWindow::calculateBoxInput(int additionalOffsetY) {
@@ -873,6 +949,13 @@ void MainWindow::openGuiSetupDialog() {
         customAppEntries = setupDialog.getCustomAppEntries(); // Benutzerdefinierte Apps abrufen
         updateAppSelector(); // Dropdown aktualisieren
         loadGuiConfiguration(); // GUI-Konfiguration laden
+    }
+}
+
+void MainWindow::updateTimelapseVisibility() {
+    bool show = (appSelector->currentText() == "rpicam-still");
+    if (timelapseRowWidget) {
+        timelapseRowWidget->setVisible(show);
     }
 }
 
@@ -950,13 +1033,6 @@ void MainWindow::initializeSelectionOverlay() {
         }
     });
 }
-void MainWindow::setupLayouts() {
-    mainLayout = new QVBoxLayout;
-    setupInputLayout();
-    setupOutputLayout();
-    setupSliderLayout();
-    setupAdvancedOptionsLayout();
-}
 
 void MainWindow::setupInputLayout() {
     auto *inputLayout = new QHBoxLayout;
@@ -966,17 +1042,9 @@ void MainWindow::setupInputLayout() {
     inputLayout->addWidget(cameraSelector);
     inputLayout->addWidget(new QLabel("Size:"));
     inputLayout->addWidget(resolutionSelector);
-    inputLayout->addWidget(new QLabel("f/s:"));
+    inputLayout->addWidget(new QLabel("fps:"));
     inputLayout->addWidget(framerateSelector);
     mainLayout->addLayout(inputLayout); // Nutze das Klassenmitglied mainLayout
-}
-
-void MainWindow::setupOutputLayout() {
-    auto *outputLayout = new QHBoxLayout;
-    outputLayout->addWidget(new QLabel("Output File:"));
-    outputLayout->addWidget(outputFileName);
-    outputLayout->addWidget(browseButton);
-    mainLayout->addLayout(outputLayout);
 }
 
 void MainWindow::setupSliderLayout() {
@@ -987,14 +1055,7 @@ void MainWindow::setupSliderLayout() {
     sliderLayout->addWidget(contrastSlider);
     mainLayout->addLayout(sliderLayout);
 }
-
-void MainWindow::setupAdvancedOptionsLayout() {
-    auto *advancedLayout = new QVBoxLayout;
-    advancedLayout->addWidget(new QLabel("Advanced Options:"));
-    advancedLayout->addWidget(segmentationCheckbox);
-    advancedLayout->addWidget(timestampCheckbox);
-    mainLayout->addLayout(advancedLayout);
-}
+  
 void MainWindow::updatePostProcessFileDropdown() {
     if (!postProcessFileSelector) return;
     if (guiPostProcessFilePath.isEmpty()) return;
@@ -1027,4 +1088,36 @@ void MainWindow::updateAppSelector() {
     appSelector->clear();
     appSelector->addItems({"rpicam-vid", "rpicam-jpeg", "rpicam-still", "rpicam-raw", "rpicam-hello"});
     appSelector->addItems(customAppEntries); // Benutzerdefinierte Apps hinzufügen
+}
+
+void MainWindow::updateOutputFileNameForTimelapse() {
+    QString name = outputFileName->text();
+    if (appSelector->currentText() == "rpicam-still" && !timelapseInput->text().isEmpty() && timelapseInput->text() != "0") {
+        if (!name.contains("_%04d.jpg")) {
+            if (name.endsWith(".jpg", Qt::CaseInsensitive)) {
+                name.chop(4);
+            }
+            name += "_%04d.jpg";
+            outputFileName->setText(name);
+        }
+    } else {
+        // Entferne das Muster, falls vorhanden
+        if (name.endsWith("_%04d.jpg")) {
+            name.chop(9);
+            name += ".jpg";
+            outputFileName->setText(name);
+        }
+    }
+}
+
+void MainWindow::updateOverlayResetButtonColor(QPushButton *button) {
+    if (!button) return;
+    QString current = BoxInput->text();
+    QString expected = calculateBoxInput(+30);
+    qDebug() << "Overlay-Reset: current=" << current << " expected=" << expected;
+    if (current != expected) {
+        button->setStyleSheet("color: red;");
+    } else {
+        button->setStyleSheet("color: black;");
+    }
 }

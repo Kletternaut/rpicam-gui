@@ -126,6 +126,10 @@ void MainWindow::startRpiCamApp() {
     if (saturation != 1.0) { // Nur hinzufügen, wenn nicht Standardwert
         arguments << "--saturation" << QString::number(saturation, 'f', 1);
     }
+    QString shutterValue = shutterInput ? shutterInput->text().trimmed() : "";
+    if (!shutterValue.isEmpty()) {
+        arguments << "--shutter" << shutterValue;
+    }
     // ...vor dem Start...
     if (hflipCheckbox->isChecked()) {
         arguments << "--hflip";
@@ -270,6 +274,9 @@ void MainWindow::saveConfigurationToFile(const QString &filePath) {
         if (rotationCheckbox && rotationCheckbox->isChecked()) {
             out << "rotation=180\n";
         }
+        if (shutterInput && !shutterInput->text().trimmed().isEmpty()) {
+            out << "shutter=" << shutterInput->text().trimmed() << "\n";
+        }
 
         file.close();
         outputLog->append("Configuration saved to " + filePath);
@@ -343,6 +350,8 @@ void MainWindow::loadConfigurationFromFile(const QString &filePath) {
                 outputFileName->setText(value);
             } else if (key == "timelapse") {
                 timelapseInput->setText(value);
+            } else if (key == "shutter") {
+                if (shutterInput) shutterInput->setText(value);
             }
         }
 
